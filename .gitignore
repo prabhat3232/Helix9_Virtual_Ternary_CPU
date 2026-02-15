@@ -1,1 +1,49 @@
-build
+# Build and Binary
+build/
+bin/
+lib/
+*.exe
+*.dll
+*.lib
+*.pdb
+*.obj
+*.ilk
+*.exp
+*.suo
+*.user
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+*.cmake
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Project Specific (Generated Object Files is .ht)
+*.ht
+!tests/*.ht   # Keep test artifacts if they are checked in source? No, test.ht is generated? No, test.ht is expected input but not present. I'll ignore generated .ht.
+# Actually, benchmarks/*.ht are generated.
+# Tests sometimes use .ht as input? 
+# The assembler outputs .ht.
+# Let's ignore all .ht for now as they are build artifacts.
+
+# Logs and Temp
+*.log
+*.tmp
+temp/
