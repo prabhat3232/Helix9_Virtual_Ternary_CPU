@@ -1,0 +1,9 @@
+HTX 1 1
+SECTION .text 0 3
+136376795100 221217126024 168915360012 
+SYMBOLS 2
+main .text 1 G
+loop .text 3 L
+RELOCATIONS 2
+0 loop ABS .text
+1 ext_func PCR .text

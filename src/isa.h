@@ -16,26 +16,59 @@
 // JGZ: 023 (Jump Greater Zero)
 
 // We represent opcodes as int64_t for easy switching in C++
-// We represent opcodes as int64_t for easy switching in C++
-namespace Opcode {
-    // Memory
-    const int64_t LDT = 1; // Load
-    const int64_t STT = 2; // Store
+// Full v0.1 Opcode Set
+// See docs/architecture/isa_spec.md for encoding details
+enum class Opcode {
+    // System (0-1)
+    HLT = 0,
+    NOP = 1,
     
-    // Arithmetic
-    const int64_t ADD = 3;
-    const int64_t SUB = 4;
-    const int64_t MUL = 5; // (Not implemented in PoC yet)
+    // Arithmetic (2-6)
+    ADD = 2,
+    SUB = 3,
+    MUL = 4,
+    DIV = 5,
+    MOD = 6,
     
-    // Logic
-    const int64_t MIN = 6;
-    const int64_t MAX = 7;
-    const int64_t NEG = 8;
+    // Logic (7-11)
+    AND = 7,
+    OR  = 8,
+    XOR = 9,
+    LSL = 10,
+    LSR = 11,
     
-    // Control
-    const int64_t JMP = 9;
-    const int64_t JEZ = 10;
-    const int64_t JLZ = 11;
-    const int64_t JGZ = 12;
-    const int64_t HLT = 0; // Halt
-}
+    // Data Movement (12-15)
+    MOV = 12, // Move Register
+    LDI = 13, // Load Immediate
+    LDW = 14, // Load Word
+    STW = 15, // Store Word
+    
+    // Branch / Control (16-24)
+    JMP = 16,
+    BEQ = 17,
+    BNE = 18,
+    BGT = 19,
+    BLT = 20,
+    CALL = 21,
+    RET = 22,
+    MSR = 23,
+    MRS = 24,
+    
+    // New
+    CMP = 25,
+    
+    // Cognitive (Phase 6)
+    CNS = 26, // Consensus
+    DEC = 27, // Decay
+    POP = 28, // PopCount
+    SAT = 29, // Saturating Add
+    
+    // Vector (Phase 7)
+    VEC_CNS = 30, // Vector Consensus
+    VEC_POP = 31, // Vector PopCount
+    DEC_MASK = 32, // Mask Decay
+    SAT_MAC = 33, // Saturating MAC
+    
+    UNKNOWN = 99
+};
+

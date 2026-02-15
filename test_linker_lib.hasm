@@ -1,0 +1,11 @@
+.section .text
+.global ext_func
+
+ext_func:
+    ldi.w r1 42
+    ret
+
+.section .data
+.global lib_val
+lib_val:
+    .word 999

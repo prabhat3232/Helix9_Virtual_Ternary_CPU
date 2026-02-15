@@ -1,0 +1,62 @@
+; Helix9 Extended Verification: Ternary Sponge Hash
+; Goal: Hashing a sequence of trits using a Keccak-like sponge construction.
+; State: 3 Registers (R1, R2, R3) -> 81 trits capacity (roughly).
+; Rate: 1 Register (R1) input per block.
+
+.ORG 100
+Start:
+    ; Initialize State (IV)
+    ; Registers R1, R2, R3 are state vectors
+    LDI R1, 0
+    LDI R2, 0   
+    LDI R3, 0   
+    
+    ; Input Data 1: Message "1"
+    LDI R4, 1       
+    CALL Absorb
+    
+    ; Input Data 2: Message "-1"
+    LDI R4, -1      
+    CALL Absorb
+    
+    ; Input Data 3: Message "1"
+    LDI R4, 1       
+    CALL Absorb
+    
+    ; Squeeze Output
+    LDI R5, 250     ; Storage Base Addr
+    STW R1, R5, 0   ; Hash Part 1 -> Mem[250]
+    STW R2, R5, 1   ; Hash Part 2 -> Mem[251]
+    STW R3, R5, 2   ; Hash Part 3 -> Mem[252]
+    
+    HLT
+
+; --- Absorb Function ---
+; Input: R4 (Message Block)
+; Updates: R1, R2, R3 (State)
+Absorb:
+    ; Absorption: XOR Message into Rate part of State (R1)
+    XOR R1, R4      ; R1 = R1 ^ M
+    
+    ; Permutation: Mixing R1, R2, R3 non-linearly
+Permute:
+    ; Step 1: Theta (Mixing columns/registers)
+    XOR R1, R2      ; R1 ^= R2
+    XOR R2, R3      ; R2 ^= R3
+    XOR R3, R1      ; R3 ^= New R1 (Feedback)
+    
+    ; Step 2: Rho (Rotation/Shift)
+    LSL R1          ; Shift Left R1 (R1 *= 3)
+    LSR R2          ; Shift Right R2 (R2 /= 3)
+    ; R3 stays
+    
+    ; Step 3: Pi (Swap / nonlinear)
+    MOV R6, R1      ; Temp = R1
+    ADD R1, R1, R3  ; R1 += R3 (Arithmetic mixing introduces nonlinearity via carries)
+    XOR R2, R6      ; R2 ^= Old R1
+    
+    ; Step 4: Add Constant (Round Constant)
+    LDI R6, 42      ; Constant meant to break symmetry
+    ADD R3, R3, R6
+    
+    RET

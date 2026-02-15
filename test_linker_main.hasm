@@ -1,0 +1,12 @@
+.section .text
+.global main
+
+main:
+    ldi.w r0 1
+    call ext_func
+    
+    ; Access Data from Lib
+    ldi.w r2 lib_val ; ABS Reloc
+    ld.w r3 [r2]     ; Load 999
+    
+    halt

@@ -1,0 +1,129 @@
+; ==========================================
+; Helix-9 Runtime Library (helix_runtime.htlib)
+; v0.1 - Cognitive Compute & Memory Utils
+; ==========================================
+
+.section .text
+.global _memcpy
+.global _vec_consensus
+.global _vec_decay
+.global _pop_count_region
+
+
+; ------------------------------------------
+; _memcpy: Copy memory block
+; Inputs:
+;   R1: Dest Address
+;   R2: Src Address
+;   R3: Count (Words)
+; Output:
+;   R1: Dest Address (Preserved)
+; ------------------------------------------
+_memcpy:
+    ldi.w r4 0           ; Index
+    ldi.w r5 0           ; Temp Val
+    ldi.w r6 1           ; Increment
+    ldi.w r7 0           ; Temp Addr Src
+    ldi.w r8 0           ; Temp Addr Dest
+memcpy_loop:
+    cmp.w r3 r4        ; Check if Index == Count
+    beq memcpy_done     ; If equal we are done
+    
+    add.w r7 r2 r4    ; SrcAddr = BaseSrc + Index
+    ld.w r5 [r7]       ; Load Mem[SrcAddr]
+    
+    add.w r8 r1 r4    ; DestAddr = BaseDest + Index
+    st.w r5 [r8]       ; Store Mem[DestAddr]
+    
+    add.w r4 r4 r6    ; Index++
+    jmp memcpy_loop
+memcpy_done:
+    ret
+
+; ------------------------------------------
+; _vec_consensus: Element-wise Consensus
+; Inputs:
+;   R1: Dest Vector Ptr
+;   R2: Src Vector Ptr
+;   R3: Length
+; Output:
+;   Dest[i] = Consensus(Dest[i], Src[i])
+; ------------------------------------------
+_vec_consensus:
+    ldi.w r4 0
+    ldi.w r6 1
+    ldi.w r7 0           ; Temp Dest Val
+    ldi.w r8 0           ; Temp Src Val
+    ldi.w r9 0           ; Temp Addr Dest
+    ldi.w r10 0          ; Temp Addr Src
+cons_loop:
+    cmp.w r3 r4
+    beq cons_done
+    
+    add.w r9 r1 r4    ; DestAddr
+    add.w r10 r2 r4   ; SrcAddr
+    
+    ld.w r7 [r9]       ; Load Dest[i]
+    ld.w r8 [r10]      ; Load Src[i]
+    
+    cns.w r7 r7 r8    ; Consensus(Dest Src)
+    
+    st.w r7 [r9]       ; Store back
+    add.w r4 r4 r6
+    jmp cons_loop
+cons_done:
+    ret
+
+; ------------------------------------------
+; _vec_decay: Apply Decay Mask
+; Inputs:
+;   R1: Vector Ptr
+;   R2: Length
+; ------------------------------------------
+_vec_decay:
+    ldi.w r4 0
+    ldi.w r6 1
+    ldi.w r7 0           ; Temp Val
+    ldi.w r8 0           ; Temp Addr
+decay_loop:
+    cmp.w r2 r4
+    beq decay_done
+    
+    add.w r8 r1 r4    ; Addr
+    ld.w r7 [r8]
+    dec.w r7 r7        ; Decay (Clear)
+    st.w r7 [r8]
+    
+    add.w r4 r4 r6
+    jmp decay_loop
+decay_done:
+    ret
+
+; ------------------------------------------
+; _pop_count_region: Count Trits in Region
+; Inputs:
+;   R1: Start Addr
+;   R2: Length
+; Output:
+;   R0: Total Population Count
+; ------------------------------------------
+_pop_count_region:
+    ldi.w r0 0           ; Accumulator
+    ldi.w r4 0           ; Index
+    ldi.w r5 0           ; Temp Word
+    ldi.w r6 1           ; Increment
+    ldi.w r7 0           ; Temp Addr
+    ldi.w r8 0           ; Temp Pop
+pop_loop:
+    cmp.w r2 r4
+    beq pop_done
+    
+    add.w r7 r1 r4    ; Addr
+    ld.w r5 [r7]       ; Load Word
+    pop.t r8 r5        ; Get PopCount of Word
+    add.w r0 r0 r8    ; Accumulate
+    
+    add.w r4 r4 r6
+    jmp pop_loop
+pop_done:
+    ret

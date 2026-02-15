@@ -1,0 +1,64 @@
+.section .text
+.global main
+
+main:
+    ; Arithmetic & Logic
+    ldi.w r1 20
+    ldi.w r2 10
+    add.w r3 r1 r2      ; r3 = 30
+    sub.w r4 r1 r2      ; r4 = 10
+    mul.w r5 r2 r2      ; r5 = 100
+    div.w r6 r1 r2      ; r6 = 2
+    mod.w r7 r1 r2      ; r7 = 0
+    
+    and.w r8 r1 r2      ; Logic
+    or.w  r9 r1 r2
+    xor.w r10 r1 r2
+    
+    ; Data Movement
+    mov.w r11 r1        ; r11 = 20
+    st.w  r11 [r0]      ; Store to [0] (r0 is 0?) - user responsibility
+    ld.w  r12 [r0]      ; Load back
+    
+    st.w  r11 [r0+5]    ; Indexed Store
+    ld.w  r13 [r0+5]    ; Indexed Load
+    
+    ; Comparison & Branching
+    cmp.w r1 r2         ; 20 - 10 > 0
+    bgt greater         ; Should branch
+    halt                ; Should skip
+
+greater:
+    ldi.w r14 1
+    cmp.w r2 r1         ; 10 - 20 < 0
+    blt less            ; Should branch
+    halt
+
+less:
+    ldi.w r14 2
+    
+    ; Loop Test (Backward Jump)
+    ldi.w r1 5
+loop:
+    ldi.w r0 1
+    sub.w r1 r1 r0      ; Decrement
+    cmp.w r1 r0
+    bgt loop            ; Loop until r1 <= 1
+    
+    ; Call/Ret
+    call my_func
+    
+    ; End
+    halt
+
+my_func:
+    ldi.w r15 99
+    ret
+
+.section .data
+val1:
+    .word 1234
+    .word -5678
+buffer:
+    .word 0
+    .word 0

@@ -1,0 +1,90 @@
+; Test Program for Helix Runtime Library
+; Verifies: _memcpy, _vec_consensus, _pop_count_region
+
+.section .text
+.global _start
+
+_start:
+    ; 1. Setup Data for Memcpy
+    ; Src: [200] = {10, 20, 30}
+    ldi.w r1 10
+    ldi.w r2 0
+    st.w r1 [r2+200]
+    
+    ldi.w r1 20
+    st.w r1 [r2+201]
+    
+    ldi.w r1 30
+    st.w r1 [r2+202]
+    
+    ; Call _memcpy(Dest=300, Src=200, Count=3)
+    ldi.w r1 300
+    ldi.w r2 200
+    ldi.w r3 3
+    call _memcpy
+    
+    ; Verify: Check Mem[300] (Should be 10)
+    ld.w r10 [r2+100] ; [300] using base 200+100? No, r2 is modified? 
+    ; Wait, calling convention!
+    ; _memcpy(r1, r2, r3) -> r1 preserved. r2, r3? 
+    ; My impl: r4, r5, r6, r7 used. r2, r3 preserved?
+    ; No, _memcpy uses r2 in loop?
+    ; _memcpy does: add.w r7, r2, r4. r2 is base. Not modified.
+    ; So r2 is still 200.
+    ; But I want to check [300].
+    ldi.w r11 300
+    ld.w r10 [r11] ; Should be 10
+    
+    
+    ; 2. Setup Data for Consensus
+    ; Vec1 [400]: {1, -1, 0}
+    ; Vec2 [500]: {1, 1, -1}
+    ; Expected Result in Vec1: {1, -1, -1} (0 and -1 conflict? No cns(0,-1)=0? Wait)
+    ; CNS(0, -1) -> 0 & -1 -> 0 (Consensus requires Agreement or Zero-dominance?)
+    ; Our CNS bitwise logic: pos & pos, neg & neg.
+    ; 0 (00, 00) & -1 (00, 01) -> 00, 00 = 0.
+    ; Correct.
+    
+    ldi.w r1 1
+    ldi.w r2 400
+    st.w r1 [r2]      ; [400] = 1
+    
+    ldi.w r1 -1
+    st.w r1 [r2+1]    ; [401] = -1
+    
+    ldi.w r1 0
+    st.w r1 [r2+2]    ; [402] = 0
+    
+    ldi.w r1 1
+    ldi.w r2 500
+    st.w r1 [r2]      ; [500] = 1
+    
+    ldi.w r1 1
+    st.w r1 [r2+1]    ; [501] = 1
+    
+    ldi.w r1 -1
+    st.w r1 [r2+2]    ; [502] = -1
+    
+    ; Call _vec_consensus(Dest=400, Src=500, Len=3)
+    ldi.w r1 400
+    ldi.w r2 500
+    ldi.w r3 3
+    call _vec_consensus
+    
+    ; Verify [400]..[402]
+    ldi.w r12 400
+    ld.w r13 [r12]    ; Expected: 1
+    ld.w r9 [r12+1]   ; Expected: 0 (CNS(-1, 1) -> 0). Use R9 (Safe).
+    ld.w r15 [r12+2]  ; Expected: 0 (CNS(0, -1) -> 0)
+
+    
+    
+    ; 3. PopCount
+    ; Count trits in [400]..[402] (Values: 1, 0, 0)
+    ; Total Pop = 1.
+    ldi.w r1 400
+    ldi.w r2 3
+    call _pop_count_region
+    ; Result in R0. Should be 1.
+    
+    halt

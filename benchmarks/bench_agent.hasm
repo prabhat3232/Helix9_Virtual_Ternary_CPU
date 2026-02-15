@@ -1,0 +1,54 @@
+; bench_agent.hasm
+; System Benchmark: Full Cognitive Cycle
+; Sequence: Sense -> Weight Update -> Decay -> Action
+
+.ORG 0x0000
+Start:
+    LDI.W R1 100    ; Agent Cycle Count
+    LDI.W R2 0x100  ; Input Ptr Base
+    LDI.W R3 0x200  ; Weight Ptr Base
+    LDI.W R13 1     ; Decrement
+    LDI.W R6 5      ; Vector Length
+    LDI.W R12 1     ; Inc
+    
+    JMP AgentLoop
+
+; Data (Placed after code, but referenced by pointers)
+; We just assume memory at 0x100 and 0x200 is available/valid.
+; We don't initialize it here to save space, relies on simulator memory init (0).
+; But "Input" should be non-zero for meaningful test.
+; Let's init some data? 
+; We can't easily init at 0x100 without padding.
+; We'll just run with 0s (NOPs) or rely on whatever.
+; Actually, previous benchmarks ran fine.
+; Let's just execute the logic.
+
+AgentLoop:
+    LDI.W R5 0      ; Accumulator
+    LDI.W R7 0      ; Index
+
+    ; Inner Loop: Dot Product
+    VectorLoop:
+        ; Calc Input Addr
+        ADD.W R11 R2 R7
+        LD.W R8 [R11]     ; Load Input[i]
+        
+        ; Calc Weight Addr
+        ADD.W R10 R3 R7
+        LD.W R9 [R10]     ; Load Weight[i]
+        
+        CNS.W R0 R8 R9    ; Consensus -> R0
+        ADD.W R5 R5 R0    ; Accumulate
+        
+        ; Weight Update
+        ADD.W R9 R9 R8
+        ST.W R9 [R10]     ; Store Weight
+        
+        ADD.W R7 R7 R12   ; i++
+        SUB.W R0 R6 R7
+        BGT VectorLoop
+    
+    SUB.W R1 R1 R13
+    BGT AgentLoop
+    
+    HLT

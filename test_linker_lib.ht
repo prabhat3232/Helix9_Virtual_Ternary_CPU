@@ -1,0 +1,9 @@
+HTX 1 2
+SECTION .text 0 2
+136376795139 230127770466 
+SECTION .data 0 1
+999 
+SYMBOLS 2
+ext_func .text 0 G
+lib_val .data 0 G
+RELOCATIONS 0

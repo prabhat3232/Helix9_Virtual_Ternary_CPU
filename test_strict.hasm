@@ -1,0 +1,21 @@
+.section .text
+.global main
+
+main:
+    ldi.w r1 10
+    ldi.w r2 20
+    add.w r3 r1 r2
+    
+    ; Memory access
+    st.w r3 [r1]
+    ld.w r4 [r1+5]
+    
+    ; Branch
+    cmp.w r3 r4
+    beq loop
+    
+loop:
+    sub.w r3 r3 1
+    bgt loop
+    
+    halt

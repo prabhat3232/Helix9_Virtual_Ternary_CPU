@@ -1,0 +1,93 @@
+; 1D Seeker Agent
+; Goal: Lock onto Goal Direction using Consensus/Decay.
+; Environment Contract:
+;   Input:  0x3100 (Trit 0: Direction)
+;   Belief: 0x3000 (Trit 0)
+;   Action: 0x3200 (Output)
+;   Conf:   0x3300 (PopCount)
+
+.section .text
+.global _start
+
+_start:
+    ; 1. Enable Cognitive Mode (Bit 6 = 729)
+    ldi.w r1 729
+    msr r1
+    
+    ; Setup Pointers
+    ldi.w r2 12288   ; 0x3000 (Belief)
+    ldi.w r3 12544   ; 0x3100 (Input)
+    ldi.w r4 12800   ; 0x3200 (Action)
+    ldi.w r5 13056   ; 0x3300 (Confidence)
+    
+    ; Setup Constants
+    ldi.w r6 0       ; Decay Counter
+    ldi.w r7 4       ; Decay Period
+    ldi.w r8 0       ; Decay Mask (0 = Clear All)
+    ldi.w r9 0       ; Confidence Threshold (0 -> Act if Conf >= 1)
+
+Loop:
+    ; --- SENSE ---
+    ld.w r10 [r3]    ; Read Input
+    
+    ; --- UPDATE (Consensus) ---
+    ld.w r11 [r2]    ; Read Belief
+    cns.w r11 r11 r10 ; Belief = CNS(Belief, Input)
+    
+    ; --- DECAY (Every 4 ticks) ---
+    ; r6 = (r6 + 1) % 4? 
+    ; Or just increment and check
+    ldi.w r12 1
+    add.w r6 r6 r12
+    cmp.w r6 r7
+    blt SkipDecay    ; If r6 < 4, skip
+    
+    ; Do Decay
+    dec.w r11 r11 r8 ; Decay Belief with Mask r8
+    ldi.w r6 0       ; Reset Counter
+    
+SkipDecay:
+    st.w r11 [r2]    ; Write back Belief
+    
+    ; --- DECIDE ---
+    pop.t r13 r11    ; Confidence = PopCount(Belief)
+    st.w r13 [r5]    ; Log Confidence
+    
+    ; Check Threshold
+    cmp.w r13 r9      ; Helper CMP (Sets Z, P, N)
+    ; If R13 > R9 (P=1) -> ACT
+    ; Wait, CMP R13, R9 -> R13 - R9. If R13 > R9, Res > 0 (P=1).
+    bgt Act
+    
+    ; Wait (Action = 0)
+    ldi.w r14 0
+    jmp StoreAction
+
+Act:
+    ; Action = Sign(Belief)
+    ; If Belief > 0 -> +1
+    ; If Belief < 0 -> -1
+    ; If Belief == 0 -> 0 (Should not happen if Conf > 5)
+    ; We can use CMP Belief, 0
+    ldi.w r15 0
+    cmp.w r11 r15
+    bgt MoveRight
+    blt MoveLeft
+    ldi.w r14 0      ; Fallback
+    jmp StoreAction
+
+MoveRight:
+    ldi.w r14 1
+    jmp StoreAction
+
+MoveLeft:
+    ldi.w r14 -1
+    jmp StoreAction
+
+StoreAction:
+    st.w r14 [r4]    ; Write Action
+    
+    ; --- WAIT FOR ENV ---
+    halt
+    jmp Loop
+

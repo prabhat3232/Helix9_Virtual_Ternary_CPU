@@ -1,0 +1,23 @@
+; Test Program for HelixASM
+.ORG 0
+
+Start:
+    LDI R1, 10      ; Count up to 10
+    LDI R2, 0       ; Counter
+    LDI R3, 1       ; Increment
+
+Loop:
+    ADD R2, R2, R3  ; R2++
+    STW R2, R0, 100 ; Store current count to Mem[100] (Rs2=R0, Imm=100)
+    
+    ; Compare R2 vs R1
+    ; We don't have CMP yet in v0.1 ISA (Check isa_spec.md)
+    ; But we have SUB.
+    ; Temp = R1 - R2
+    ; If Temp > 0, Loop. (i.e. if R2 < R1)
+    
+    SUB R4, R1, R2
+    BGT Loop        ; Branch if R1 > R2 (Positive)
+    
+Done:
+    HLT

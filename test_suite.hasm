@@ -1,0 +1,75 @@
+; HelixASM Extended Test Suite
+; Verifies: Arithmetic, Logic, Memory, Flow Control, Directives
+
+.ORG 0
+    JMP Main
+
+; --- Data Section ---
+.ORG 50
+ValA: .DAT 10
+ValB: .DAT 20
+ValC: .DAT -5
+
+; --- Main Program ---
+.ORG 100
+Main:
+    ; 1. Arithmetic Test
+    LDI R1, 10
+    LDI R2, 2
+    ADD R3, R1, R2      ; R3 = 12
+    STW R3, R0, 201     ; Mem[201] = 12
+    
+    SUB R3, R1, R2      ; R3 = 8
+    STW R3, R0, 202     ; Mem[202] = 8
+    
+    MUL R3, R1, R2      ; R3 = 20
+    STW R3, R0, 203     ; Mem[203] = 20
+    
+    DIV R3, R1, R2      ; R3 = 5
+    STW R3, R0, 204     ; Mem[204] = 5
+
+    ; 2. Logic Test
+    LDI R1, 1       ; 0...01
+    LDI R2, -1      ; 0...0-
+    AND R3, R1, R2  ; Min(1, -1) = -1
+    STW R3, R0, 210 ; Mem[210] = -1
+    
+    OR R3, R1, R2   ; Max(1, -1) = 1
+    STW R3, R0, 211 ; Mem[211] = 1
+    
+    LDI R1, 1
+    LDI R2, 1
+    XOR R3, R1, R2  ; SumMod3(1, 1) = -1 (2 -> -1)
+    STW R3, R0, 212 ; Mem[212] = -1
+    
+    LDI R1, 1       ; 1
+    LSL R3, R1      ; 1 * 3 = 3 (10 in ternary)
+    STW R3, R0, 213 ; Mem[213] = 3
+    
+    LDI R1, 5       ; 5 (1, -1, -1) -> 1 -1 -1 = 9-3-1=5.
+    LSR R3, R1      ; 5 (1 T T) >> 1 = 2 (1 T)
+    STW R3, R0, 214 ; Mem[214] = 2
+    
+    ; 3. Memory & Directives
+    ; Load from .DAT
+    LDW R1, R0, 50      ; Load ValA (10)
+    LDW R2, R0, 51      ; Load ValB (20)
+    ADD R3, R1, R2      ; 30
+    STW R3, R0, 220     ; Mem[220] = 30
+    
+    ; 4. Stack & Function Call
+    ; Initialize SP (R13)
+    LDI R13, 1000       ; Stack Pointer top
+    
+    ; Call Function
+    LDI R1, 5
+    LDI R2, 5
+    CALL MyFunc         ; Returns R3 = R1 + R2 = 10
+    STW R3, R0, 230     ; Mem[230] = 10
+    
+    HLT
+
+; --- Functions ---
+MyFunc:
+    ADD R3, R1, R2
+    RET

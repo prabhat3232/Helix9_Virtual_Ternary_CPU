@@ -1,0 +1,24 @@
+; ==============================================
+; test_e2e_io.hasm - I/O Utility Library
+; Provides: store_result, load_value
+; ==============================================
+.section .text
+.global store_result
+.global load_value
+
+; store_result: Stores R1 to memory [R2]
+store_result:
+    st.w r1 [r2]
+    ret
+
+; load_value: Loads R1 from memory [R2]
+load_value:
+    ld.w r1 [r2]
+    ret
+
+.section .data
+.global output_buf
+output_buf:
+    .word 0
+    .word 0
+    .word 0

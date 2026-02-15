@@ -1,0 +1,27 @@
+; bench_cog.hasm
+; Micro-benchmark for Cognitive Primitives (CNS, DEC, POP)
+; Linear layout: Code first, then Data
+
+.ORG 0x0000
+Start:
+    LDI.W R1 1000   ; Loop Counter
+    LDI.W R2 0x100  ; Ptr Value (Data Base)
+    LDI.W R3 1      ; Increment
+    LDI.W R5 1      ; Vec 1
+    LDI.W R6 -1     ; Vec -1
+
+Loop:
+    ; Simulate Vector Op using Primitives
+    LDI.W R4 1       ; Dummy Load
+    CNS.W R4 R5 R6   ; 1. Consensus
+    DEC.W R4 R5      ; 2. Decay
+    POP.T R7 R4      ; 3. PopCount
+    
+    SUB.W R1 R1 R3   ; Decrement Loop
+    BGT Loop
+    
+    HLT
+
+; Data
+vec_a: .WORD 1 -1 0 1 1
+vec_b: .WORD 1 1 -1 0 1

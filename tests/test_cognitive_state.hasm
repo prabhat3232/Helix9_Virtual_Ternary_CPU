@@ -1,0 +1,42 @@
+; Test Cognitive State Logic
+; Verifies: MSR (Mode Switch), Page Wrapping, Secure Fault Trap
+
+.section .text
+.global _start
+
+_start:
+    ; 1. Enable Cognitive Mode
+    ; STATUS Bit 6 = 1 (Value: 729? No, 3^6 = 729)
+    ; Bit index 0..6. 
+    ; Trit 6 set to 1.
+    ; Value = 3^6 = 729.
+    ldi.w r1 729
+    msr r1           ; Set STATUS = 729 (COG_MODE=1)
+    
+    ; 2. Test Page Wrapping
+    ; Base: 0x3000 (Start of Manifold)
+    ; Write to 0x30FF (Last word of page)
+    ; Next write to 0x3100 (Should wrap to 0x3000 if page-local?)
+    ; Wait, Page-Local means `(Base & ~FF) | Offset`.
+    ; If I use `st.w r2, [r3+1]` where r3=0x30FF.
+    ; Addr = 0x3100.
+    ; Wrapped = (0x30FF & ~FF) | (0x3100 & FF) = 0x3000 | 0x00 = 0x3000.
+    
+    ldi.w r3 12288   ; 0x3000
+    ldi.w r4 255     ; 0xFF
+    add.w r3 r3 r4   ; r3 = 0x30FF
+    
+    ldi.w r2 42      ; Pattern
+    st.w r2 [r3+1]   ; Write to "0x3100" -> Wrapped to 0x3000
+    
+    ; Verify: Read 0x3000
+    ldi.w r5 12288   ; 0x3000
+    ld.w r6 [r5]     ; Should be 42
+    
+    ; 3. Test Secure Fault
+    ; Attempt write to 0x2000 (Outside Manifold)
+    ldi.w r7 8192    ; 0x2000
+    ldi.w r8 99
+    st.w r8 [r7]     ; Should TRAP (Halt/Reset? We just print TRAP)
+    
+    halt

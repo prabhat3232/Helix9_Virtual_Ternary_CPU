@@ -1,0 +1,63 @@
+; ==============================================
+; test_e2e_main.hasm - Main Program
+; Tests: Cross-file calls, loops, data access,
+;        arithmetic, branching, memory ops
+; ==============================================
+.section .text
+.global main
+
+main:
+    ; --- Test 1: Cross-file addition ---
+    ; add_nums(5, 3) -> R1 should be 8
+    ldi.w r1 5
+    ldi.w r2 3
+    call add_nums
+    ; R1 = 8 now
+    mov.w r6 r1       ; Save result: R6 = 8
+
+    ; --- Test 2: Cross-file multiplication ---
+    ; multiply_loop(4, 3) -> R3 should be 12
+    ldi.w r1 4
+    ldi.w r2 3
+    call multiply_loop
+    ; R3 = 12 now
+    mov.w r7 r3       ; Save result: R7 = 12
+
+    ; --- Test 3: Conditional branching ---
+    ; if R6 > R7 then R8=1 else R8=2
+    cmp.w r6 r7
+    bgt set_one
+    ldi.w r8 2
+    jmp done_cmp
+set_one:
+    ldi.w r8 1
+done_cmp:
+    ; R8 should be 2 (8 < 12)
+
+    ; --- Test 4: Cross-file data access ---
+    ; Load math_version (should be 100)
+    ldi.w r2 math_version
+    call load_value
+    mov.w r9 r1       ; R9 = 100
+
+    ; --- Test 5: Store result to output_buf ---
+    mov.w r1 r7       ; R1 = 12 (multiply result)
+    ldi.w r2 output_buf
+    call store_result
+    ; Now memory[output_buf] = 12
+
+    ; --- Test 6: Load it back to verify ---
+    ldi.w r2 output_buf
+    call load_value
+    mov.w r10 r1      ; R10 = 12 (loaded back)
+
+    ; --- Test 7: Arithmetic verification ---
+    ; R11 = R6 + R7 = 8 + 12 = 20
+    add.w r11 r6 r7
+
+    halt
+
+.section .data
+.global main_flag
+main_flag:
+    .word 42

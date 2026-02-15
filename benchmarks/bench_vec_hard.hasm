@@ -1,0 +1,13 @@
+; bench_vec_hard.hasm
+; Hardware Implementation of a 256-element Vector Consensus
+; Target: Measure cycle count of VEC.CNS
+
+.ORG 0x0000
+    LDI.W R2 0x3000 ; Dest Ptr (Page 48)
+    LDI.W R3 0x4000 ; Src1 Ptr (Page 64)
+    LDI.W R4 0x5000 ; Src2 Ptr (Page 80)
+    
+    ; Single Instruction for 256 elements
+    VEC.CNS R2 R3 R4
+    
+    HLT

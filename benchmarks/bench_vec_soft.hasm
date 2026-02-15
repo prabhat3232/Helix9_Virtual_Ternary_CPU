@@ -1,0 +1,34 @@
+; bench_vec_soft.hasm
+; Software Implementation of a 256-element Vector Consensus
+; Target: Measure actual cycle count for a full page operation.
+
+.ORG 0x0000
+    LDI.W R1 256    ; Loop Count
+    LDI.W R2 0x1000 ; Src1 Base
+    LDI.W R3 0x2000 ; Src2 Base
+    LDI.W R4 0x3000 ; Dest Base
+    LDI.W R5 0      ; Index
+    LDI.W R6 1      ; Inc
+
+Loop:
+    ; Calculate Addresses
+    ADD.W R10 R2 R5 ; Src1 + i
+    ADD.W R11 R3 R5 ; Src2 + i
+    ADD.W R12 R4 R5 ; Dest + i
+
+    ; Load
+    LD.W R7 [R10]
+    LD.W R8 [R11]
+    
+    ; Consensus
+    CNS.W R9 R7 R8
+    
+    ; Store
+    ST.W R9 [R12]
+    
+    ; Increment
+    ADD.W R5 R5 R6
+    SUB.W R1 R1 R6
+    BGT Loop
+
+    HLT

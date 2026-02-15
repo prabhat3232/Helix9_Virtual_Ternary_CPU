@@ -1,0 +1,5 @@
+.section .text
+.global main
+main:
+    call missing_func ; Should cause Linker Error
+    halt

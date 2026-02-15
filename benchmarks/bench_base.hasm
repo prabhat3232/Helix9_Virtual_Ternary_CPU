@@ -1,0 +1,20 @@
+; bench_base.hasm
+; Micro-benchmark for Base Arithmetic Operations (ADD, SUB, LOOP)
+; Target: Measure raw IPC (Instructions Per Cycle) and Emulation Speed (MIPS)
+
+.ORG 0x0000
+    JMP Start
+
+Start:
+    LDI.W R1 1000   ; Loop Counter
+    LDI.W R2 0      ; Accumulator
+    LDI.W R3 1      ; Increment
+    LDI.W R4 5      ; Constant
+
+Loop:
+    ADD.W R2 R2 R3  ; 1. Add
+    MUL.W R5 R2 R4  ; 2. Multiply
+    SUB.W R1 R1 R3  ; 3. Decrement Loop
+    BGT Loop        ; 4. Branch
+    
+    HLT

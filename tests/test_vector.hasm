@@ -1,0 +1,80 @@
+; test_vector.hasm
+; Verification of Phase 7 Vector ISA Extensions
+
+.SECTION .text
+main:
+    ; Setup Pointers
+    ldi.w r1 0x4000 ; Page A (Belief)
+    ldi.w r2 0x4100 ; Page B (Input)
+    ldi.w r3 0x4200 ; Page C (Mask)
+    ldi.w r4 0x4300 ; Page D (Destination)
+
+    ; Initialize Page A (Belief) with +1 at offset 0, 1
+    ldi.w r0 1
+    st.w r0 [r1+0] ; A[0] = 1
+    st.w r0 [r1+1] ; A[1] = 1 (Wait, I want 0 at A[1]?)
+    ; Need to increment r1 or use offsets.
+    ; Test assembler offset support: st.w val [ptr+offset]
+    ldi.w r10 1
+    ldi.w r11 0
+    
+    st.w r10 [r1+0] ; A[0] = 1
+    st.w r11 [r1+1] ; A[1] = 0
+    
+    ; Initialize Page B (Input) with +1 at 0, +1 at 1
+    st.w r10 [r2+0] ; B[0] = 1
+    st.w r10 [r2+1] ; B[1] = 1
+    
+    ; Test VEC.CNS (Consensus)
+    ; D = CNS(A, B)
+    ; D[0] = CNS(1, 1) = 1
+    ; D[1] = CNS(0, 1) = 1 (Learning)
+    vec.cns r4 r1 r2
+    
+    ; Verify D[0]
+    ld.w r5 [r4+0]
+    ldi.w r6 1
+    cmp.w r5 r6
+    bne error
+    
+    ; Verify D[1]
+    ld.w r5 [r4+1]
+    cmp.w r5 r6
+    bne error
+    
+    ; Test VEC.POP (PopCount)
+    ; Count D (should be 2)
+    vec.pop r7 r4
+    ldi.w r6 2
+    cmp.w r7 r6
+    bne error
+    
+    ; Test DEC.MASK
+    ; Page C (Mask) = 0 at offset 0, 1 at offset 1
+    st.w r11 [r3+0] ; Mask[0] = 0 (Clear)
+    st.w r10 [r3+1] ; Mask[1] = 1 (Keep)
+    
+    ; D = DEC(D, Mask)
+    ; D[0]: 1 & 0 -> 0
+    ; D[1]: 1 & 1 -> 1
+    dec.mask r4 r4 r3
+    
+    ; Verify D[0]
+    ld.w r5 [r4+0]
+    ldi.w r6 0
+    cmp.w r5 r6
+    bne error
+    
+    ; Verify D[1]
+    ld.w r5 [r4+1]
+    ldi.w r6 1
+    cmp.w r5 r6
+    bne error
+
+success:
+    ldi.w r0 1
+    hlt
+
+error:
+    ldi.w r0 0xBAD
+    hlt

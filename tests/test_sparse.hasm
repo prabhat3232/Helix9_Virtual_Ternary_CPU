@@ -1,0 +1,56 @@
+; test_sparse.hasm
+; Verification of Phase 7 Sparse Memory Allocation
+
+.SECTION .text
+main:
+    ; 1. Setup Pointers
+    ldi.w r1 0x3000 ; Page 48 (Cognitive Start)
+    ldi.w r2 0x3100 ; Page 49 (Next Page)
+
+    ; 2. Test Read Unallocated (Expect 0)
+    ld.w r3 [r1+0]
+    ldi.w r0 0
+    cmp.w r3 r0
+    bne error
+
+    ; 3. Test Write Non-Zero (Should Allocate)
+    ldi.w r4 42
+    st.w r4 [r1+0] ; Write 42 to 0x3000
+
+    ; 4. Test Read Back
+    ld.w r5 [r1+0]
+    cmp.w r5 r4 ; Should be 42
+    bne error
+
+    ; 5. Test Write Zero to Unallocated (Should NOT Allocate - Optimization)
+    ; Functional check: Read back should be 0.
+    ldi.w r6 0
+    st.w r6 [r2+0] ; Write 0 to 0x3100
+    ld.w r7 [r2+0]
+    cmp.w r7 r6 ; Should be 0
+    bne error
+
+    ; 6. Test Vector Ops on Sparse Memory
+    ; Vector Write to Page 48 (Allocated)
+    ; vec.cns requires 3 pointers.
+    ; Destination: r1 (0x3000, Allocated)
+    ; Source 1: r2 (0x3100, Unallocated/Zero)
+    ; Source 2: r2 (0x3100, Unallocated/Zero)
+    ; CNS(0, 0) -> 0. Dest should become 0.
+    
+    ; Setup Dest [0x3000] = 42 (from before)
+    ; Run CNS on Page 48, using Page 49 (Empty) as sources
+    vec.cns r1 r2 r2
+    
+    ; Verify Dest [0x3000] is now 0 (Consensus of 0 and 0)
+    ld.w r8 [r1+0]
+    cmp.w r8 r0
+    bne error
+
+success:
+    ldi.w r0 1
+    hlt
+
+error:
+    ldi.w r0 0xBAD
+    hlt

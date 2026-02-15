@@ -17,6 +17,11 @@ add_library(helix9_core
     src/vector_alu.h
     src/graphics.cpp
     src/graphics.h
+    src/cognitive_trace.cpp
+    src/cognitive_trace.h
+    src/cognitive/scheduler.cpp
+    src/cognitive/stability_monitor.cpp
+    src/cognitive/reward_engine.cpp
 )
 
 # Python Bindings (DLL)
@@ -49,3 +54,85 @@ target_link_libraries(run_model helix9_core)
 
 add_executable(demo_generative src/demo_generative.cpp)
 target_link_libraries(demo_generative helix9_core)
+
+# --- Assembler ---
+add_executable(helix_asm 
+    src/assembler/main.cpp 
+    src/assembler/Lexer.cpp 
+    src/assembler/Parser.cpp
+    src/trit_word.cpp 
+)
+target_link_libraries(helix_asm helix9_core)
+
+# --- Compiler (Helix C-lite) ---
+add_executable(helix_c
+    src/compiler/main.cpp
+    src/compiler/Lexer.cpp
+    src/compiler/Parser.cpp
+    src/compiler/CodeGen.cpp
+)
+target_link_libraries(helix_c helix9_core)
+
+# --- Assembler Execution Test ---
+add_executable(test_asm_exec src/test_asm_exec.cpp)
+target_link_libraries(test_asm_exec helix9_core)
+
+add_executable(test_asm_suite src/test_asm_suite.cpp)
+target_link_libraries(test_asm_suite helix9_core)
+
+add_executable(test_hash_suite src/test_hash_suite.cpp)
+target_link_libraries(test_hash_suite helix9_core)
+
+# --- Linker ---
+add_executable(helix_ld
+    src/linker/main.cpp
+    src/linker/Linker.cpp
+)
+target_link_libraries(helix_ld helix9_core)
+
+# --- Emulator ---
+add_executable(helix_emu src/emulator.cpp)
+target_link_libraries(helix_emu helix9_core)
+
+# Experiment: Seeker Env
+add_executable(seeker_env experiments/seeker_env.cpp)
+target_link_libraries(seeker_env helix9_core)
+
+# Cognitive Trace Test
+add_executable(test_trace src/test_trace.cpp)
+target_link_libraries(test_trace helix9_core)
+
+# Advanced Memory Test
+add_executable(test_advanced_memory src/test_advanced_memory.cpp)
+target_link_libraries(test_advanced_memory helix9_core)
+
+# Test: Cognitive Runtime
+add_executable(test_cognitive_runtime src/tests/test_cognitive_runtime.cpp)
+target_link_libraries(test_cognitive_runtime helix9_core)
+
+# Experiment: 2D Seeker
+add_executable(seeker_2d 
+    experiments/s2d/s2d_main.cpp
+    experiments/s2d/s2d_env.cpp
+    experiments/s2d/s2d_agent.cpp
+)
+target_link_libraries(seeker_2d helix9_core)
+# Experiment: Multi-Agent Swarm
+add_executable(swarm_exp
+    experiments/swarm/swarm_main.cpp
+    experiments/swarm/swarm_env.cpp
+    experiments/swarm/swarm_agent.cpp
+)
+target_link_libraries(swarm_exp helix9_core)
+# Experiment: Resonance (Pattern Locking)
+add_executable(resonance_exp
+    experiments/resonance/resonance_main.cpp
+    experiments/resonance/resonance_env.cpp
+    experiments/resonance/resonance_agent.cpp
+)
+target_link_libraries(resonance_exp helix9_core)
+# Benchmarks
+add_executable(helix_bench
+    benchmarks/benchmark_main.cpp
+)
+target_link_libraries(helix_bench helix9_core)

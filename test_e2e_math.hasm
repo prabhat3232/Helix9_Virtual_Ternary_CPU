@@ -1,0 +1,32 @@
+; ==============================================
+; test_e2e_math.hasm - Math Library
+; Provides: add_nums, multiply_loop
+; ==============================================
+.section .text
+.global add_nums
+.global multiply_loop
+
+; add_nums: R1 = R1 + R2
+add_nums:
+    add.w r1 r1 r2
+    ret
+
+; multiply_loop: R3 = R1 * R2 (via repeated addition)
+; Uses R4 as counter, R3 as accumulator
+multiply_loop:
+    ldi.w r3 0
+    mov.w r4 r2
+mul_loop:
+    add.w r3 r3 r1
+    ldi.w r5 1
+    sub.w r4 r4 r5
+    cmp.w r4 r5
+    bgt mul_loop
+    ; One more iteration for equality case
+    add.w r3 r3 r1
+    ret
+
+.section .data
+.global math_version
+math_version:
+    .word 100

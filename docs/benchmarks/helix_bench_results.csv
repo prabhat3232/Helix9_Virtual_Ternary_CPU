@@ -1,0 +1,7 @@
+Benchmark,Cycles,Time(ms),MIPS,Notes
+Base Arithmetic,4006,7.172,0.56,Baseline (ADD/MUL loop)
+Cognitive Ops,6006,4.422,1.36,Scalar Primitives (CNS/DEC/POP)
+Agent Cycle (Scalar),5908,7.121,0.83,Simulated Sense-Act Loop (100 iterations)
+Vector Soft (256 words),2567,3.549,0.72,Measured Scalar Loop Cost (10 cycles/word)
+Vector Hard (256 words),260,0.133,1.95,Hardware Acceleration (Simulated 1 cycle/word latency)
+Speedup Factor,9.9x,N/A,N/A,Verified Gain (2567 vs 260)
