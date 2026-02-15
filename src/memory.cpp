@@ -174,8 +174,8 @@ bool TernaryMemory::LoadExecutable(const std::string& filename) {
         std::string token;
         ss >> token;
 
-        if (token == "HX") {
-            int ver; ss >> ver; // Check version?
+        if (token == "HX" || token == "HTX") {
+            int ver; ss >> ver; 
             continue;
         }
         

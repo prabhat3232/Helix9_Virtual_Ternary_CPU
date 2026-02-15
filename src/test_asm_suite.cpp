@@ -13,12 +13,17 @@ bool CheckMem(TernaryMemory& mem, int64_t addr, int64_t expected, const std::str
     }
 }
 
-int main() {
+int main(int argc, char** argv) {
     std::cout << "--- HelixASM Extended Test Suite ---" << std::endl;
     
     TernaryMemory mem;
-    if (!mem.LoadFromFile("test_suite.ht", 0)) {
-        std::cerr << "Failed to load test_suite.ht" << std::endl;
+    // Load Test Suite (HTX Format)
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <executable_file.htx>" << std::endl;
+        return 1;
+    }
+    if (!mem.LoadExecutable(argv[1])) {
+        std::cerr << "Failed to load " << argv[1] << std::endl;
         return 1;
     }
     

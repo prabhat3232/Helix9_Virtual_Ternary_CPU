@@ -1,0 +1,59 @@
+.ORG 0
+    jmp Main
+
+.ORG 50
+ValA: .WORD 30
+
+.ORG 100
+Main:
+    ; Arithmetic
+    ldi.w R1, 10
+    ldi.w R2, 2
+    
+    add.w R3, R1, R2
+    st.w  R3, [R0 201]
+    
+    sub.w R3, R1, R2
+    st.w  R3, [R0 202]
+    
+    mul.w R3, R1, R2
+    st.w  R3, [R0 203]
+    
+    div.w R3, R1, R2
+    st.w  R3, [R0 204]
+    
+    ; Logic
+    ldi.w R1, 1
+    ldi.w R2, -1
+    
+    and.w R3, R1, R2
+    st.w  R3, [R0 210]
+    
+    or.w  R3, R1, R2
+    st.w  R3, [R0 211]
+    
+    ldi.w R1, 1
+    xor.w R3, R1, R1
+    st.w  R3, [R0 212] ; 1^1 = 2 = -1 (SumMod3)
+    
+    ldi.w R1, 1
+    lsl.w R3, R1
+    st.w  R3, [R0 213] ; 1<<1 = 3
+    
+    ldi.w R1, 6
+    lsr.w R3, R1
+    st.w  R3, [R0 214] ; 6>>1 = 2
+    
+    ; Memory Load from Data Section
+    ld.w R1, [R0 ValA]
+    st.w R1, [R0 220]
+    
+    ; Call/Ret
+    call MyFunc
+    
+    hlt
+
+MyFunc:
+    ldi.w R1, 10
+    st.w  R1, [R0 230]
+    ret

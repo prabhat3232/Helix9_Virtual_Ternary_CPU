@@ -81,6 +81,16 @@ void Parser::Pass1() {
             continue;
         }
 
+        // .org directive
+        if (token.type == TokenType::DIR_ORG) {
+            Token val = lexer.NextToken();
+            if (val.type == TokenType::NUMBER) {
+                offset = val.intValue;
+            }
+            token = lexer.PeekToken();
+            continue;
+        }
+
         // .global directive (skip in Pass 1, handled in Pass 2)
         if (token.type == TokenType::DIR_GLOBAL) {
             lexer.NextToken(); // Consume symbol name
@@ -148,6 +158,24 @@ void Parser::Pass2() {
     
     Token token = lexer.NextToken();
     while (token.type != TokenType::END_OF_FILE) {
+        
+        if (token.type == TokenType::DIR_ORG) {
+            Token val = lexer.NextToken();
+            int64_t targetAddr = val.intValue;
+            
+            if (targetAddr < currentAddress) {
+                 std::cerr << "Error: .org cannot move backwards (yet)" << std::endl;
+                 exit(1);
+            }
+            
+            while (currentAddress < targetAddr) {
+                currentSection->data.push_back(TernaryWord::FromInt64(0));
+                currentAddress++;
+            }
+            
+            token = lexer.PeekToken();
+            continue;
+        }
         
         if (token.type == TokenType::DIR_SECTION) {
             Token name = lexer.NextToken();
@@ -246,11 +274,14 @@ std::vector<Operand> Parser::ParseOperands(Lexer& lexer, bool dryRun) {
             if (next.type == TokenType::NUMBER) {
                 offset = next.intValue;
                 lexer.NextToken();
+            } else if (next.type == TokenType::IDENTIFIER) {
+                if (!dryRun && symbolTable.count(next.text)) {
+                     offset = symbolTable[next.text];
+                }
+                // Record symbol for relocation if needed?
+                // For now, just resolve local label.
+                lexer.NextToken();
             }
-            // Handle + signed number?
-            // If lexer sees +, it starts a Number. 
-            // So if we have [r1+5], Lexer sees [, r1, +5 (Number), ].
-            // Logic holds.
             
             // TODO: Support [r1+LABEL]?
             // If next is Identifier...

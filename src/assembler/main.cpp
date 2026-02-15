@@ -12,8 +12,13 @@ int main(int argc, char** argv) {
     std::string inputFile = argv[1];
     std::string outputFile = "out.ht";
     
-    if (argc >= 4 && std::string(argv[2]) == "-o") {
-        outputFile = argv[3];
+    if (argc >= 3) {
+        std::string arg2 = argv[2];
+        if (arg2 == "-o" && argc >= 4) {
+            outputFile = argv[3];
+        } else if (arg2 != "-o") {
+            outputFile = arg2;
+        }
     }
     
     // Read Source

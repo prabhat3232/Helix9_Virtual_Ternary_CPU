@@ -22,7 +22,7 @@ void Lexer::Advance() {
 void Lexer::SkipWhitespace() {
     while (true) {
         char c = Current();
-        if (c == ' ' || c == '\t' || c == '\r') {
+        if (c == ' ' || c == '\t' || c == '\r' || c == ',') {
             Advance();
         } else if (c == ';') {
             // Comment: skip until newline
