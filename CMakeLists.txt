@@ -3,6 +3,9 @@ project(Helix9)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Output Directory (Simplify CTest discovery)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Core Library
 add_library(helix9_core
     src/trit_word.cpp
@@ -136,3 +139,14 @@ add_executable(helix_bench
     benchmarks/benchmark_main.cpp
 )
 target_link_libraries(helix_bench helix9_core)
+
+# --- CTest Configuration ---
+enable_testing()
+
+add_test(NAME TestALU COMMAND $<TARGET_FILE:test_alu>)
+add_test(NAME TestCPU COMMAND $<TARGET_FILE:test_cpu>)
+add_test(NAME TestAI COMMAND $<TARGET_FILE:test_ai>)
+add_test(NAME TestMemory COMMAND $<TARGET_FILE:test_advanced_memory>)
+add_test(NAME TestASMExec COMMAND $<TARGET_FILE:test_asm_exec>)
+add_test(NAME TestCognitiveRuntime COMMAND $<TARGET_FILE:test_cognitive_runtime>)
+add_test(NAME TestTrace COMMAND $<TARGET_FILE:test_trace>)

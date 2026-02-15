@@ -8,36 +8,34 @@
 TernaryWord Encode(Opcode op, int64_t rd, int64_t rs1, int64_t rs2_or_imm) {
     TernaryWord inst;
     
-    // Opcode: Trits 0-5
+    // Format: [Opcode(6)][Mode(3)][Rd(4)][Rs1(4)][Rs2/Imm(10)]
+    // Indices: 21..26, 18..20, 14..17, 10..13, 0..9
+
+    // Opcode: Trits 21-26
     int64_t op_val = static_cast<int64_t>(op);
-    for (int i = 0; i < 6; ++i) {
-        // Extract trit i from op_val (which is int64, so balanced ternary conversion needed? 
-        // No, Opcode enum values are small integers 0-20.
-        // We can just set them if they are small.
-        // Wait, Opcode values like 18 (JMP) need to be converted to Trits.
-        // Let's use a temp TernaryWord to convert the value, then copy trits.
-        TernaryWord temp = TernaryWord::FromInt64(op_val);
-        inst.SetTrit(i, temp.GetTrit(i));
+    {
+         TernaryWord temp = TernaryWord::FromInt64(op_val);
+         for (int i = 0; i < 6; ++i) inst.SetTrit(21+i, temp.GetTrit(i));
     }
 
-    // Mode: Trits 6-8 (Skipping for now, 0)
+    // Mode: Trits 18-20 (0)
     
-    // Rd: Trits 9-12
+    // Rd: Trits 14-17
     {
         TernaryWord temp = TernaryWord::FromInt64(rd);
-        for(int i=0; i<4; ++i) inst.SetTrit(9+i, temp.GetTrit(i));
+        for(int i=0; i<4; ++i) inst.SetTrit(14+i, temp.GetTrit(i));
     }
 
-    // Rs1: Trits 13-16
+    // Rs1: Trits 10-13
     {
         TernaryWord temp = TernaryWord::FromInt64(rs1);
-        for(int i=0; i<4; ++i) inst.SetTrit(13+i, temp.GetTrit(i));
+        for(int i=0; i<4; ++i) inst.SetTrit(10+i, temp.GetTrit(i));
     }
 
-    // Rs2/Imm: Trits 17-26
+    // Rs2/Imm: Trits 0-9
     {
         TernaryWord temp = TernaryWord::FromInt64(rs2_or_imm);
-        for(int i=0; i<10; ++i) inst.SetTrit(17+i, temp.GetTrit(i));
+        for(int i=0; i<10; ++i) inst.SetTrit(0+i, temp.GetTrit(i));
     }
     
     return inst;
