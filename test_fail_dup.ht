@@ -1,6 +1,0 @@
-HTX 1 1
-SECTION .text 0 1
-0 
-SYMBOLS 1
-main .text 1 G
-RELOCATIONS 0

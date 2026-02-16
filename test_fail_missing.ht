@@ -1,7 +1,0 @@
-HTX 1 1
-SECTION .text 0 2
-221217126024 0 
-SYMBOLS 1
-main .text 1 G
-RELOCATIONS 1
-0 missing_func PCR .text
