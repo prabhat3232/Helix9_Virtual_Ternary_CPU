@@ -335,8 +335,10 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
 
 
     int64_t opcode = 0;
-    if (opMap.count(mnemonic)) opcode = opMap[mnemonic];
-    else {
+    if (opMap.count(mnemonic)) {
+        opcode = opMap[mnemonic];
+        // std::cout << "[ASM-DEBUG] " << mnemonic << " -> " << opcode << std::endl;
+    } else {
         std::cerr << "Error: Unknown mnemonic '" << mnemonic << "'" << std::endl;
         exit(1);
     }

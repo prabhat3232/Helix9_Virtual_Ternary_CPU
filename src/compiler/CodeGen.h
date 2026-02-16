@@ -3,6 +3,7 @@
 #include <sstream>
 #include <map>
 #include <stack>
+#include <set> // Added for std::set
 
 class CodeGen {
 public:
@@ -19,6 +20,7 @@ private:
     // Locals: Offset < 0 (e.g. FP - 1)
     std::map<std::string, int> locals;
     int stackOffset = 0; // Tracks local var stack usage per function
+    std::set<std::string> globals; // Added global variable set
     
     void Emit(const std::string& instr);
     void EmitLabel(const std::string& label);

@@ -1,0 +1,112 @@
+; Helix C-lite Compiled Output
+.section .text
+JMP _start
+.ORG 100
+_start:
+LDI.W R13, 6000
+CALL main
+HLT
+
+fib:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BGT L2_False
+    LDI.W R1, 1
+    JMP L2_End
+L2_False:
+    LDI.W R1, 0
+L2_End:
+    CMP.W R1, R0
+    BEQ L0
+    LD.W R1, [R12, -2]
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    JMP L1
+L0:
+L1:
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    SUB.W R1, R2, R1
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL fib
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 2
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    SUB.W R1, R2, R1
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL fib
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    ADD.W R1, R2, R1
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+main:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    LD.W R1, [R0 limit]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL fib
+    ST.W R1, [R0 result]
+    LD.W R1, [R0 result]
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+
+; Globals (RAM)
+.ORG 4096
+limit: .WORD 2
+result: .WORD 0
+
+; Safety Halt
+HaltLoop: HLT

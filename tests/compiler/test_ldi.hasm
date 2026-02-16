@@ -1,0 +1,4 @@
+.section .text
+LDI.W R1, 1
+LDI.W R2, -4
+HLT

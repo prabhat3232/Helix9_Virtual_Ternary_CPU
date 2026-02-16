@@ -185,7 +185,7 @@ std::unique_ptr<Expression> Parser::ParseBinary(int minPrec) {
     
     while (true) {
         int prec = GetPrecedence(Peek().type);
-        if (prec < minPrec) break;
+        if (prec == 0 || prec < minPrec) break;
         
         TokenType op = Advance().type;
         std::unique_ptr<Expression> right = ParseBinary(prec + 1); // Left associative

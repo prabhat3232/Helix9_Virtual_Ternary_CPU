@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <bitset>
 
-Cpu::Cpu(TernaryMemory& memory) : mem(memory), halted(false), vec_unit(*this) {
+Cpu::Cpu(TernaryMemory& memory) : mem(memory), halted(false), vec_unit(*this), trace_enabled(false) {
     // Registers are already array-initialized
     pc = TernaryWord::FromInt64(0);
     status = TernaryWord::FromInt64(0);
@@ -65,7 +65,18 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
     TernaryWord& Rd = regs[rd_idx];
     const TernaryWord& Rs1 = regs[rs1_idx];
     const TernaryWord& Rs2 = regs[rs2_idx];
-    TernaryWord Imm = TernaryWord::FromInt64(imm_val); // Basic conversion
+    TernaryWord Imm = TernaryWord::FromInt64(imm_val); 
+    
+    // Resolve Second Operand (Register or Immediate)
+    TernaryWord Op2 = (mode == 1) ? Imm : regs[rs2_idx];
+    if (mode == 1) {
+         // Immediate Mode
+         Op2 = Imm;
+    } else {
+         // Register Mode (0)
+         // Note: Parser uses Mode 1 for Imm. Mode 0 for Reg.
+         Op2 = regs[rs2_idx];
+    }
 
     // --- EXECUTE ---
     
@@ -97,9 +108,9 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         case Opcode::ADD: {
             metrics.active_cycles++;
             if (status.GetTrit(Cpu::BIT_COG) == 1) {
-                Rd = Rs1.SaturatingAdd(Rs2);
+                Rd = Rs1.SaturatingAdd(Op2);
             } else {
-                Rd = Rs1.Add(Rs2);
+                Rd = Rs1.Add(Op2);
             }
             UpdateFlagsArithmetic(Rd, false, false); 
             writeback = true; new_rd_val = Rd;
@@ -107,15 +118,15 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         }
         case Opcode::SUB: {
             metrics.active_cycles++;
-            TernaryWord neg_rs2 = Rs2.Negate();
-            Rd = Rs1.Add(neg_rs2);
+            TernaryWord neg_op2 = Op2.Negate();
+            Rd = Rs1.Add(neg_op2);
             UpdateFlagsArithmetic(Rd, false, false);
             writeback = true; new_rd_val = Rd;
             break;
         }
         case Opcode::MUL: {
             metrics.active_cycles++;
-            int64_t res = Rs1.ToInt64() * Rs2.ToInt64();
+            int64_t res = Rs1.ToInt64() * Op2.ToInt64();
             Rd = TernaryWord::FromInt64(res);
             UpdateFlagsArithmetic(Rd, false, false); 
             writeback = true; new_rd_val = Rd;
@@ -123,7 +134,7 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         }
         case Opcode::DIV: {
             metrics.active_cycles++;
-            int64_t d = Rs2.ToInt64();
+            int64_t d = Op2.ToInt64();
             if (d == 0) { Trap(Cpu::VECTOR_ILLEGAL); break; }
             int64_t res = Rs1.ToInt64() / d;
             Rd = TernaryWord::FromInt64(res);
@@ -133,7 +144,7 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         }
         case Opcode::MOD: {
             metrics.active_cycles++;
-            int64_t d = Rs2.ToInt64();
+            int64_t d = Op2.ToInt64();
             if (d == 0) { Trap(Cpu::VECTOR_ILLEGAL); break; }
             int64_t res = Rs1.ToInt64() % d;
             Rd = TernaryWord::FromInt64(res);
@@ -143,9 +154,9 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         }
 
         // Logic
-        case Opcode::AND: metrics.active_cycles++; Rd = Rs1.Min(Rs2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
-        case Opcode::OR:  metrics.active_cycles++; Rd = Rs1.Max(Rs2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
-        case Opcode::XOR: metrics.active_cycles++; Rd = Rs1.XOR(Rs2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
+        case Opcode::AND: metrics.active_cycles++; Rd = Rs1.Min(Op2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
+        case Opcode::OR:  metrics.active_cycles++; Rd = Rs1.Max(Op2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
+        case Opcode::XOR: metrics.active_cycles++; Rd = Rs1.XOR(Op2); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
         
         case Opcode::LSL: metrics.active_cycles++; Rd = Rs1.ShiftLeft(); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
         case Opcode::LSR: metrics.active_cycles++; Rd = Rs1.ShiftRight(); UpdateFlags(Rd); writeback = true; new_rd_val = Rd; break;
