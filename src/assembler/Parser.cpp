@@ -91,13 +91,6 @@ void Parser::Pass1() {
             continue;
         }
 
-        // .global directive (skip in Pass 1, handled in Pass 2)
-        if (token.type == TokenType::DIR_GLOBAL) {
-            lexer.NextToken(); // Consume symbol name
-            token = lexer.PeekToken();
-            continue;
-        }
-
         // Labels
         if (token.type == TokenType::IDENTIFIER) {
              Token next = lexer.PeekToken();
@@ -107,22 +100,8 @@ void Parser::Pass1() {
                      std::cerr << "Error: Duplicate " << label << std::endl;
                      exit(1);
                  }
-                 // Symbol table now stores Section + Offset
-                 // But for simple lookups, we might just map Label -> Offset (Absolute?)
-                 // Resolving symbols across sections requires Linker.
-                 // Assembler should just emit Symbol Table Entry.
-                 // We also need local lookup for resolving within same file.
-                 // Let's store: Label -> {SectionIndex, Offset}
-                 // Simpler: Label -> Offset (assuming linear address space? NO, relocatable).
-                 // Label -> Offset relative to Section.
-                 // We need a struct for SymbolTable value?
-                 // Or just modify symbolTable to map string -> int64 (offset).
-                 // And we look up section from context?
-                 // If we cross-reference, we need section.
-                 
-                 // Since we return ObjectFile, we populate result.symbols.
-                 result.symbols.push_back({label, result.sections[sectionIdx].name, offset, false}); // Local default
-                 symbolTable[label] = offset; // Store offset for Quick resolve in Pass 2 (assuming same section)
+                 result.symbols.push_back({label, result.sections[sectionIdx].name, offset, false}); 
+                 symbolTable[label] = offset; 
                  
                  lexer.NextToken(); // Colon
                  token = lexer.NextToken();
@@ -134,7 +113,7 @@ void Parser::Pass1() {
         if (token.type == TokenType::DIR_WORD || token.type == TokenType::DIR_DAT) {
              offset++;
              lexer.NextToken(); lexer.NextToken(); // Skip .word val
-             token = lexer.PeekToken();
+             token = lexer.NextToken(); // Was PeekToken
              continue;
         }
         if (token.type == TokenType::IDENTIFIER) {

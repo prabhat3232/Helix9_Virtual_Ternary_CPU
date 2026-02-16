@@ -1,0 +1,310 @@
+; Helix C-lite Compiled Output
+.section .text
+JMP _start
+.ORG 100
+_start:
+LDI.W R13, 6000
+CALL main
+HLT
+
+factorial:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    ADD.W R13, R13, -1
+    LDI.W R1, 1
+    ST.W R1, [R13, 0]
+L0:
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BGT L2_True
+    LDI.W R1, 0
+    JMP L2_End
+L2_True:
+    LDI.W R1, 1
+L2_End:
+    CMP.W R1, R0
+    BEQ L1
+    LD.W R1, [R12, -3]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -2]
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    MUL.W R1, R2, R1
+    ST.W R1, [R12, -3]
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    SUB.W R1, R2, R1
+    ST.W R1, [R12, -2]
+    JMP L0
+L1:
+    LD.W R1, [R12, -3]
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+math_test:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R2, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R3, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R4, [R13, 0]
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -3]
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    ADD.W R1, R2, R1
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -4]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -5]
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    SUB.W R1, R2, R1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    MUL.W R1, R2, R1
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+logic_test:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    ADD.W R13, R13, -1
+    ST.W R2, [R13, 0]
+    LD.W R1, [R12, -2]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R12, -3]
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BGT L5_True
+    LDI.W R1, 0
+    JMP L5_End
+L5_True:
+    LDI.W R1, 1
+L5_End:
+    CMP.W R1, R0
+    BEQ L3
+    LD.W R1, [R12, -3]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 0
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BGT L8_True
+    LDI.W R1, 0
+    JMP L8_End
+L8_True:
+    LDI.W R1, 1
+L8_End:
+    CMP.W R1, R0
+    BEQ L6
+    LDI.W R1, 1
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    JMP L7
+L6:
+L7:
+    JMP L4
+L3:
+L4:
+    LDI.W R1, 0
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+main:
+    ADD.W R13, R13, -1
+    ST.W R12, [R13, 0]
+    MOV.W R12, R13
+    ADD.W R13, R13, -1
+    ST.W R14, [R13, 0]
+    LDI.W R1, 5
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL factorial
+    ST.W R1, [R0 result_fact]
+    LDI.W R1, 10
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 2
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 5
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 3
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R4, [R13, 0]
+    ADD.W R13, R13, 1
+    LD.W R3, [R13, 0]
+    ADD.W R13, R13, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL math_test
+    ST.W R1, [R0 result_math]
+    LDI.W R1, 5
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 2
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    LD.W R1, [R13, 0]
+    ADD.W R13, R13, 1
+    CALL logic_test
+    ST.W R1, [R0 result_logic]
+    LD.W R1, [R0 result_fact]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 120
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BNE L11_True
+    LDI.W R1, 0
+    JMP L11_End
+L11_True:
+    LDI.W R1, 1
+L11_End:
+    CMP.W R1, R0
+    BEQ L9
+    LDI.W R1, 1
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    JMP L10
+L9:
+L10:
+    LD.W R1, [R0 result_math]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 24
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BNE L14_True
+    LDI.W R1, 0
+    JMP L14_End
+L14_True:
+    LDI.W R1, 1
+L14_End:
+    CMP.W R1, R0
+    BEQ L12
+    LDI.W R1, 2
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    JMP L13
+L12:
+L13:
+    LD.W R1, [R0 result_logic]
+    ADD.W R13, R13, -1
+    ST.W R1, [R13, 0]
+    LDI.W R1, 1
+    LD.W R2, [R13, 0]
+    ADD.W R13, R13, 1
+    CMP.W R2, R1
+    BNE L17_True
+    LDI.W R1, 0
+    JMP L17_End
+L17_True:
+    LDI.W R1, 1
+L17_End:
+    CMP.W R1, R0
+    BEQ L15
+    LDI.W R1, 3
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    JMP L16
+L15:
+L16:
+    LDI.W R1, 111
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+    LD.W R14, [R12, -1]
+    MOV.W R13, R12
+    LD.W R12, [R13, 0]
+    ADD.W R13, R13, 1
+    RET
+
+; Globals (RAM)
+.ORG 4096
+result_fact: .WORD 0
+result_math: .WORD 0
+result_logic: .WORD 0
+
+; Safety Halt
+HaltLoop: HLT

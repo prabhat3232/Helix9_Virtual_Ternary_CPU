@@ -166,32 +166,14 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
             metrics.active_cycles++;
             TernaryWord addr = Rs1.Add(Imm);
             TernaryWord raw_addr = addr;
-
+            
             // Cognitive Mode Protection (Bit 6)
             if (status.GetTrit(Cpu::BIT_COG) == 1) {
                 int64_t a = addr.ToInt64();
-                // 1. Validate Range (0x3000 - 0x7FFF)
                 if (a < 0x3000 || a > 0x7FFF) {
                     Trap(Cpu::VECTOR_SECURE_FAULT);
                     break;
                 }
-                // 2. Page Wrapping (256 words)
-                // A' = (A % 256) + (A & ~255)
-                int64_t page_base = a & ~0xFF; 
-                int64_t offset = a & 0xFF;
-                // Wrapping logic handled by masking? 
-                // Wait. Spec says A' = (A mod 256) + PageBase.
-                // If Rs1+Imm exceeds page, it wraps.
-                // But Add() already happened.
-                // If the addition crossed a page boundary, we must wrap it back.
-                // Example: Base=0x3000. Index=256. Res=0x3100. Should be 0x3000.
-                // We need to know the 'Base' implied by the instruction?
-                // Actually, Page-Local Arithmetic usually means `effective_addr = base + (index % 256)`.
-                // But we computed `addr = Rs1 + Imm`.
-                // If we treat `Rs1` as Base, loops work.
-                // Implementation: 
-                // Effective Address = (Rs1 & ~0xFF) | ((Rs1 + Imm) & 0xFF)
-                // This forces the lower 8 bits to wrap within the page defined by Rs1.
                 int64_t base = Rs1.ToInt64();
                 int64_t effective = (base & ~0xFF) | (a & 0xFF);
                 addr = TernaryWord::FromInt64(effective);
@@ -213,7 +195,6 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
                     Trap(Cpu::VECTOR_SECURE_FAULT);
                     break;
                 }
-                // Page Wrapping
                 int64_t base = Rs1.ToInt64();
                 int64_t effective = (base & ~0xFF) | (a & 0xFF);
                 addr = TernaryWord::FromInt64(effective);
