@@ -3,6 +3,9 @@
 #include <fstream>
 #include <sstream>
 
+using namespace Helix;
+using namespace Helix::Assembler;
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Usage: helix-asm <input.hasm> [-o <output.ht>]" << std::endl;

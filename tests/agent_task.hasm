@@ -1,0 +1,12 @@
+
+; Agent Task for Concurrency Test
+; Each agent increments R1 and yields implicitly via Scheduler preemption
+
+.global _start
+
+_start:
+    ldi.w r1 0      ; Counter
+    ldi.w r2 1      ; Increment
+loop:
+    add.w r1 r1 r2  ; R1++
+    jmp loop        ; Infinite Loop

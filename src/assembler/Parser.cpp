@@ -7,6 +7,9 @@
 // We will enforce lowercase via Lexer or check here.
 // Spec says "Lowercase Mnemonics". strict.
 
+using namespace Helix;
+using namespace Helix::Assembler;
+
 Parser::Parser(const std::string& source) : src(source) {}
 
 ObjectFile Parser::Compile() {
@@ -91,6 +94,13 @@ void Parser::Pass1() {
             continue;
         }
 
+        // Global directive (Ignore in Pass 1, handled in Pass 2)
+        if (token.type == TokenType::DIR_GLOBAL) {
+             lexer.NextToken(); // Skip symbol name
+             token = lexer.PeekToken();
+             continue;
+        }
+
         // Labels
         if (token.type == TokenType::IDENTIFIER) {
              Token next = lexer.PeekToken();
@@ -110,10 +120,23 @@ void Parser::Pass1() {
         }
         
         // Data/Instruction -> Increment Offset
+        // Data/Instruction -> Increment Offset
         if (token.type == TokenType::DIR_WORD || token.type == TokenType::DIR_DAT) {
-             offset++;
-             lexer.NextToken(); lexer.NextToken(); // Skip .word val
-             token = lexer.NextToken(); // Was PeekToken
+             lexer.NextToken(); // Skip Directive
+             while (true) {
+                 Token val = lexer.PeekToken();
+                 if (val.type == TokenType::NUMBER) {
+                     offset++;
+                     lexer.NextToken();
+                 } else if (val.type == TokenType::IDENTIFIER) {
+                     // Label reference in data
+                     offset++;
+                     lexer.NextToken();
+                 } else {
+                     break;
+                 }
+             }
+             token = lexer.PeekToken();
              continue;
         }
         if (token.type == TokenType::IDENTIFIER) {
@@ -188,9 +211,23 @@ void Parser::Pass2() {
 
         // Data
         if (token.type == TokenType::DIR_WORD || token.type == TokenType::DIR_DAT) {
-             Token val = lexer.NextToken();
-             currentSection->data.push_back(TernaryWord::FromInt64(val.intValue));
-             currentAddress++; // Increment address
+             lexer.NextToken(); // Skip Directive
+             while (true) {
+                 Token val = lexer.PeekToken();
+                 if (val.type == TokenType::NUMBER) {
+                     currentSection->data.push_back(TernaryWord::FromInt64(val.intValue));
+                     currentAddress++;
+                     lexer.NextToken();
+                 } else if (val.type == TokenType::IDENTIFIER) {
+                     int64_t v = 0;
+                     if (symbolTable.count(val.text)) v = symbolTable[val.text];
+                     currentSection->data.push_back(TernaryWord::FromInt64(v));
+                     currentAddress++;
+                     lexer.NextToken();
+                 } else {
+                     break;
+                 }
+             }
              token = lexer.PeekToken();
              continue;
         }
@@ -309,7 +346,7 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         // Cognitive (Phase 6)
         {"cns.w", 26}, {"dec.w", 27}, {"pop.t", 28}, {"sat.add", 29},
         // Vector (Phase 7)
-        {"vec.cns", 30}, {"vec.pop", 31}, {"dec.mask", 32}, {"sat.mac", 33}
+        {"vec.cns", 30}, {"vec.pop", 31}, {"dec.mask", 32}, {"vec.sat.mac", 33}
     };
 
 

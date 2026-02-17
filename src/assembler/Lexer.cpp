@@ -148,6 +148,7 @@ Token Lexer::TokenizeIdentifier() {
     if (lower == ".section" || lower == ".text" || lower == ".data") return {TokenType::DIR_SECTION, lower, 0, token.line, token.column};
     if (lower == ".global") return {TokenType::DIR_GLOBAL, lower, 0, token.line, token.column};
     if (lower == ".word" || lower == ".int") return {TokenType::DIR_WORD, lower, 0, token.line, token.column};
+    if (lower == ".dat") return {TokenType::DIR_DAT, lower, 0, token.line, token.column};
     if (lower == ".org") return {TokenType::DIR_ORG, lower, 0, token.line, token.column};
     
     // Registers

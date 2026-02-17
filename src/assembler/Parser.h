@@ -5,6 +5,9 @@
 #include <vector>
 #include <string>
 
+namespace Helix {
+namespace Assembler {
+
 enum class OperandType {
     REGISTER,
     IMMEDIATE, // Number or Label Address
@@ -44,6 +47,12 @@ struct ObjectFile {
     std::vector<Relocation> relocations;
 };
 
+} // namespace Assembler
+} // namespace Helix
+
+namespace Helix {
+namespace Assembler {
+
 class Parser {
 public:
     Parser(const std::string& source);
@@ -72,3 +81,6 @@ private:
     
     int64_t currentAddress;
 };
+
+} // namespace Assembler
+} // namespace Helix

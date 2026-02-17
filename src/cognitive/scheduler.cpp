@@ -58,35 +58,33 @@ void Scheduler::ExecuteAgent(std::shared_ptr<Agent> agent) {
     (void)agent; // Prevent unused warning for now
 
     // 2. CONTEXT SWITCH
-    // Save current "System" context (optional, or we assume System matches Scheduler)
-    // For now, Helix is singular. We just load Agent PC/SP.
-    
+    // Save System Context (for safety)
     TernaryWord system_pc = cpu.pc;
-    TernaryWord system_sp = cpu.regs[13]; // SP
+    TernaryWord system_status = cpu.status;
+    std::vector<TernaryWord> system_regs(16);
+    for(int i=0; i<16; ++i) system_regs[i] = cpu.regs[i];
 
     // Load Agent
     cpu.pc = TernaryWord::FromInt64(agent->pc);
-    cpu.regs[13] = TernaryWord::FromInt64(agent->sp);
+    cpu.status = TernaryWord::FromInt64(agent->status);
+    for(int i=0; i<16; ++i) cpu.regs[i] = TernaryWord::FromInt64(agent->regs[i]);
     
     // 3. RUN QUANTUM
     uint64_t cycles_used = cpu.Step(max_agent_cycles);
     
     // 4. UPDATE AGENT STATE
     agent->pc = cpu.pc.ToInt64();
-    agent->sp = cpu.regs[13].ToInt64();
+    agent->status = cpu.status.ToInt64();
+    for(int i=0; i<16; ++i) {
+        agent->regs[i] = cpu.regs[i].ToInt64();
+    }
+    agent->sp = cpu.regs[13].ToInt64(); // Update helper field
     agent->last_tick = cognitive_tick_count;
 
-    // Restore System?
-    // In a real OS, yes. Here, the Scheduler IS the system code running on the same CPU.
-    // So we must rely on C++ stack preservation or manual restore.
-    // Actually, `Step` manages the virtual CPU loop. The Scheduler is C++ code driving it.
-    // So we just restore the Virtual CPU state to "Idle/System" if needed.
-    // For now, let's leave CPU state as "last agent left it" unless we have a specific System Idle loop.
-    // But to be safe, let's restore System registers if we had a "System Mode".
-    // ...
-    
+    // Restore System
     cpu.pc = system_pc;
-    cpu.regs[13] = system_sp;
+    cpu.status = system_status;
+    for(int i=0; i<16; ++i) cpu.regs[i] = system_regs[i];
     
     // 5. STABILIZE: Compute Metrics (Flux, Energy)
     stability_monitor.CaptureState(*agent, cpu.mem);

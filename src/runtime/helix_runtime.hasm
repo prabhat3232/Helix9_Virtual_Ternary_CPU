@@ -5,6 +5,7 @@
 
 .section .text
 .global _memcpy
+.global _memset
 .global _vec_consensus
 .global _vec_decay
 .global _pop_count_region
@@ -38,6 +39,31 @@ memcpy_loop:
     add.w r4 r4 r6    ; Index++
     jmp memcpy_loop
 memcpy_done:
+    ret
+
+; ------------------------------------------
+; _memset: Set memory block
+; Inputs:
+;   R1: Dest Address
+;   R2: Value (Word)
+;   R3: Count (Words)
+; Output:
+;   R1: Dest Address (Preserved)
+; ------------------------------------------
+_memset:
+    ldi.w r4 0           ; Index
+    ldi.w r6 1           ; Increment
+    ldi.w r8 0           ; Temp Addr Dest
+memset_loop:
+    cmp.w r3 r4
+    beq memset_done
+    
+    add.w r8 r1 r4    ; DestAddr
+    st.w r2 [r8]       ; Store Val
+    
+    add.w r4 r4 r6    ; Index++
+    jmp memset_loop
+memset_done:
     ret
 
 ; ------------------------------------------

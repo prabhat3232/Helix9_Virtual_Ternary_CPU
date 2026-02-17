@@ -33,7 +33,9 @@ struct Agent {
 
     // Execution Context
     uint64_t pc;
-    uint64_t sp;
+    uint64_t sp; // Kept for convenience, actually R13
+    std::vector<int64_t> regs; // R0-R15 (R13=SP, R15=PC mirrored generally but good to have full set)
+    int64_t status;
     
     // Performance & Health Metrics
     int64_t health_score;    // 0-100
@@ -44,7 +46,7 @@ struct Agent {
         : id(agent_id), state(AgentState::INIT), priority(128), last_tick(0),
           belief_page_start(0), belief_page_count(0),
           input_page_start(0), output_page_start(0), shared_page_start(0),
-          pc(0), sp(0),
+          pc(0), sp(0), regs(16, 0), status(0),
           health_score(100), stability_index(0), learning_rate(0) {}
 };
 

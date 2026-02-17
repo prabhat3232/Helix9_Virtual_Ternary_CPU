@@ -1,7 +1,11 @@
 #include "cpu.h"
+#include "assembler/Parser.h"
 #include "isa.h"
 #include <iostream>
 #include <cassert>
+
+using namespace Helix;
+using namespace Helix::Assembler;
 
 // Encode Helper (Duplicated from test_cpu for independence)
 TernaryWord Encode(Opcode op, int64_t rd, int64_t rs1, int64_t rs2_or_imm) {

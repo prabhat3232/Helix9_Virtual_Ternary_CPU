@@ -376,6 +376,18 @@ void Cpu::DumpRegisters() {
     std::cout << "-----------------" << std::endl;
 }
 
+// Debug
+void Cpu::ToggleTrace(bool enable) {
+    trace_enabled = enable;
+}
+ 
+void Cpu::DumpMetrics() {
+    std::cout << "[Metrics] Total: " << metrics.total_cycles 
+              << " Active: " << metrics.active_cycles
+              << " Energy: " << metrics.energy_proxy 
+              << " Flips: " << metrics.trit_flips << std::endl;
+}
+
 // Phase 7: Vector Unit Implementations
 void Cpu::VectorUnit::Consensus(int64_t pd_idx, int64_t ps1_idx, int64_t ps2_idx) {
     int64_t pd_base = cpu.regs[pd_idx].ToInt64() & ~0xFF;

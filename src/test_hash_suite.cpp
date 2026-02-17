@@ -1,11 +1,18 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <fstream>
+#include <sstream>
+
 #include "cpu.h"
 #include "memory.h"
 #include "trit_word.h"
+#include "assembler/Parser.h"
 
-// Simple Sponge Verification
+using namespace Helix;
+using namespace Helix::Assembler;
+
+// Sponge Helper (C++ Ref)rification
 int main() {
     std::cout << "--- HelixASM Ternary Sponge Hash Test ---" << std::endl;
 
