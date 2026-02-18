@@ -99,6 +99,17 @@ void TernaryMemory::Write(const TernaryWord& address, const TernaryWord& value) 
         return;
     }
     
+    // UART Output at 0x8000 (32768)
+    if (addr == 0x8000) {
+        char c = (char)value.ToInt64();
+        std::cout << c;
+        // Optional: Flush for interactive output
+        std::cout.flush();
+        // Debug
+        // std::cerr << "[MMU] UART: " << (int)c << std::endl;
+        return;
+    }
+    
     // 2. Cognitive Memory
     auto pair = DecodeAddress(address);
     int64_t page_id = pair.first;

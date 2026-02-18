@@ -138,6 +138,7 @@ target_link_libraries(resonance_exp helix9_core)
 add_executable(helix_bench
     benchmarks/benchmark_main.cpp
 )
+target_link_libraries(helix_bench helix9_core)
 # Test: Multi-Agent Concurrency
 add_executable(test_multi_agent 
     tests/test_multi_agent.cpp

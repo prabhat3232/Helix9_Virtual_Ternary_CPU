@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "../isa.h"
 #include <iostream>
 #include <algorithm>
 #include <map>
@@ -268,6 +269,7 @@ std::vector<Operand> Parser::ParseOperands(Lexer& lexer, bool dryRun) {
         
         // Debug print
         // std::cout << "Token: " << t.text << " Type: " << (int)t.type << std::endl;
+        // std::cout << "[DEBUG] ParseOp Token: '" << t.text << "' Type: " << (int)t.type << std::endl;
         
         if (t.type == TokenType::REGISTER) {
             ops.push_back({OperandType::REGISTER, t.intValue, 0, ""});
@@ -294,9 +296,11 @@ std::vector<Operand> Parser::ParseOperands(Lexer& lexer, bool dryRun) {
                 if (!dryRun && symbolTable.count(next.text)) {
                      offset = symbolTable[next.text];
                 }
-                // Record symbol for relocation if needed?
-                // For now, just resolve local label.
                 lexer.NextToken();
+            } else {
+                // Fallback: Consume unexpected token to avoid infinite loop
+                // std::cerr << "Warning: Unexpected token in memory operand: Type=" << (int)next.type << " Text='" << next.text << "'" << std::endl;
+                 lexer.NextToken(); 
             }
             
             // TODO: Support [r1+LABEL]?
@@ -336,17 +340,17 @@ std::vector<Operand> Parser::ParseOperands(Lexer& lexer, bool dryRun) {
 
 TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::vector<Operand>& ops) {
     static std::map<std::string, int> opMap = {
-        {"halt", 0}, {"hlt", 0}, {"nop", 1},
-        {"add.w", 2}, {"sub.w", 3}, {"mul.w", 4}, {"div.w", 5}, {"mod.w", 6},
-        {"and.w", 7}, {"or.w", 8}, {"xor.w", 9}, {"lsl.w", 10}, {"lsr.w", 11},
-        {"mov.w", 12}, {"ldi.w", 13}, {"ld.w", 14}, {"st.w", 15},
-        {"jmp", 16}, {"beq", 17}, {"bne", 18}, {"bgt", 19}, {"blt", 20},
-        {"call", 21}, {"ret", 22}, {"msr", 23}, {"mrs", 24},
-        {"cmp.w", 25},
-        // Cognitive (Phase 6)
-        {"cns.w", 26}, {"dec.w", 27}, {"pop.t", 28}, {"sat.add", 29},
-        // Vector (Phase 7)
-        {"vec.cns", 30}, {"vec.pop", 31}, {"dec.mask", 32}, {"vec.sat.mac", 33}
+        {"halt", (int)Opcode::HLT}, {"hlt", (int)Opcode::HLT}, {"nop", (int)Opcode::NOP},
+        {"add.w", (int)Opcode::ADD}, {"sub.w", (int)Opcode::SUB}, {"mul.w", (int)Opcode::MUL}, {"div.w", (int)Opcode::DIV}, {"mod.w", (int)Opcode::MOD},
+        {"and.w", (int)Opcode::AND}, {"or.w", (int)Opcode::OR}, {"xor.w", (int)Opcode::XOR}, {"lsl.w", (int)Opcode::LSL}, {"lsr.w", (int)Opcode::LSR},
+        {"mov.w", (int)Opcode::MOV}, {"ldi.w", (int)Opcode::LDI}, {"ld.w", (int)Opcode::LDW}, {"st.w", (int)Opcode::STW},
+        {"jmp", (int)Opcode::JMP}, {"beq", (int)Opcode::BEQ}, {"bne", (int)Opcode::BNE}, {"bgt", (int)Opcode::BGT}, {"blt", (int)Opcode::BLT},
+        {"call", (int)Opcode::CALL}, {"ret", (int)Opcode::RET}, {"msr", (int)Opcode::MSR}, {"mrs", (int)Opcode::MRS},
+        {"cmp.w", (int)Opcode::CMP},
+        // Cognitive
+        {"cns.w", (int)Opcode::CNS}, {"dec.w", (int)Opcode::DEC}, {"pop.t", (int)Opcode::POP}, {"sat.add", (int)Opcode::SAT},
+        // Vector
+        {"vec.cns", (int)Opcode::VEC_CNS}, {"vec.pop", (int)Opcode::VEC_POP}, {"dec.mask", (int)Opcode::DEC_MASK}, {"vec.sat.mac", (int)Opcode::SAT_MAC}
     };
 
 

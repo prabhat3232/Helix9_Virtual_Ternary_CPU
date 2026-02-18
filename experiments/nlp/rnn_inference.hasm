@@ -1,0 +1,313 @@
+; RNN Inference Kernel (Next Character Prediction)
+; Model: Input (8) -> Hidden (16) -> Output (8)
+; Weights loaded from rnn_weights.dat
+
+.ORG 0x0000
+    JMP _start
+
+; --- Constants ---
+.DAT 0              ; Padding
+.DAT 8              ; VOCAB_SIZE
+.DAT 16             ; HIDDEN_SIZE
+
+; --- Main Program ---
+.ORG 0x0100
+_start:
+    ; Initialize Stack
+    LDI.W SP, 0x6000
+
+    ; --- Test Case: Seed 'h' ---
+    ; Index of 'h' is 3 (From Python output: ' ', 'd', 'e', 'h'...)
+    
+    LDI.W R1, 3         ; First input = 'h'
+    
+    ; Loop 10 times to generate "hello worl"
+    LDI.W R10, 10       ; Loop Counter
+    
+gen_loop:
+    ; PUSH.W R1
+    ADD.W SP, SP, -1
+    ST.W R1, [SP, 0]
+    
+    ; PUSH.W R10
+    ADD.W SP, SP, -1
+    ST.W R10, [SP, 0]
+    
+    ; 1. Prepare Input Vector (One-Hot)
+    CALL make_one_hot   ; Input R1 (Index) -> Fills INPUT_VEC
+    
+    ; 2. RNN Step: Hidden = Quantize( W_ih * In + W_hh * H_prev )
+    CALL rnn_step
+    
+    ; 3. Output Step: Logits = W_ho * Hidden
+    CALL output_step
+    
+    ; 4. Argmax: Find predicted character index
+    CALL argmax         ; Returns R1 (Predicted Index)
+    
+    ; Prepare for next iteration (R1 is next input)
+    
+    ; POP.W R10
+    LD.W R10, [SP, 0]
+    ADD.W SP, SP, 1
+    
+    ; POP.W R11 (Discard Old R1)
+    LD.W R11, [SP, 0]
+    ADD.W SP, SP, 1
+    
+    ADD.W R10, R10, -1
+    CMP.W R10, 0
+    BGT gen_loop
+    
+    HLT
+
+; --- Subroutine: Make One-Hot ---
+; Input: R1 (Index 0-7)
+make_one_hot:
+    ; PUSH R2, R3
+    ADD.W SP, SP, -1
+    ST.W R2, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R3, [SP, 0]
+    
+    ; Clear Vector
+    LDI.W R2, 0       ; inputs
+    LDI.W R3, INPUT_VEC
+clear_loop:
+    ST.W R0, [R3, R2] ; Store 0
+    ADD.W R2, R2, 1
+    CMP.W R2, 8
+    BLT clear_loop
+    
+    ; Set 1 at Index
+    LDI.W R0, 1         ; Value 1
+    ST.W R0, [R3, R1]   ; INPUT_VEC[ Index ] = 1
+    LDI.W R0, 0         ; Restore R0=0
+    
+    ; POP R3, R2
+    LD.W R3, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R2, [SP, 0]
+    ADD.W SP, SP, 1
+    RET
+
+; --- Subroutine: RNN Step ---
+rnn_step:
+    ; PUSH R1..R5
+    ADD.W SP, SP, -1
+    ST.W R1, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R2, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R3, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R4, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R5, [SP, 0]
+    
+    ; --- Part A: I2H (Input * Weights_IH) ---
+    LDI.W R2, 0             ; Row Index (0..15)
+    LDI.W R3, W_ih          ; Base Address of W_ih
+    LDI.W R4, TEMP_ACC      ; Accumulator Buffer
+    
+loop_i2h:
+    LDI.W R5, 0             ; Dot Accumulator
+    LDI.W R6, 0             ; Col Index (0..7)
+i2h_dot:
+    ; Val1 = Input[Col]
+    LDI.W R7, INPUT_VEC
+    LD.W R8, [R7, R6]
+    
+    ; Val2 = W_ih[Row * 8 + Col]
+     MUL.W R9, R2, 8
+    ADD.W R9, R9, R3
+    LD.W R9, [R9, R6]   ; Load Weight
+    
+    ; Mac
+    MUL.W R8, R8, R9
+    ADD.W R5, R5, R8
+    
+    ADD.W R6, R6, 1
+    CMP.W R6, 8
+    BLT i2h_dot
+    
+    ST.W R5, [R4, R2]
+    
+    ADD.W R2, R2, 1
+    CMP.W R2, 16
+    BLT loop_i2h
+    
+    ; --- Part B: H2H (Hidden * Weights_HH) ---
+    LDI.W R2, 0             ; Row Index
+    LDI.W R3, W_hh          ; Base Address
+    
+loop_h2h:
+    LDI.W R5, 0             ; Dot Sum
+    LDI.W R6, 0             ; Col Index (0..15)
+    LDI.W R7, HIDDEN_STATE
+    
+h2h_dot:
+    LD.W R8, [R7, R6]       ; Hidden[Col]
+    
+    MUL.W R9, R2, 16
+    ADD.W R9, R9, R3
+    LD.W R9, [R9, R6]       ; Weight
+    
+    MUL.W R8, R8, R9
+    ADD.W R5, R5, R8
+    
+    ADD.W R6, R6, 1
+    CMP.W R6, 16
+    BLT h2h_dot
+    
+    ; Add to Temp Acc
+    LD.W R8, [R4, R2]       ; Load existing (from Part A)
+    ADD.W R8, R8, R5
+    ST.W R8, [R4, R2]
+    
+    ADD.W R2, R2, 1
+    CMP.W R2, 16
+    BLT loop_h2h
+    
+    ; --- Part C: Activation (Quantize & Update Hidden) ---
+    LDI.W R2, 0
+loop_act:
+    LD.W R5, [R4, R2]       ; Load Accumulator
+    
+    ; Quantize: If > 0 -> 1, If < 0 -> -1, Else 0. (Simple Sign)
+    CMP.W R5, 0
+    BGT act_pos
+    BLT act_neg
+    LDI.W R5, 0
+    JMP act_store
+act_pos:
+    LDI.W R5, 1
+    JMP act_store
+act_neg:
+    LDI.W R5, -1
+    
+act_store:
+    LDI.W R7, HIDDEN_STATE
+    ST.W R5, [R7, R2]
+    
+    ADD.W R2, R2, 1
+    CMP.W R2, 16
+    BLT loop_act
+    
+    ; POP R5..R1
+    LD.W R5, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R4, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R3, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R2, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R1, [SP, 0]
+    ADD.W SP, SP, 1
+    RET
+
+; --- Subroutine: Output Step ---
+output_step:
+    ; PUSH R1..R4
+    ADD.W SP, SP, -1
+    ST.W R1, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R2, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R3, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R4, [SP, 0]
+    
+    LDI.W R2, 0             ; Row Index (0..7 Outputs)
+    LDI.W R3, W_ho
+    LDI.W R4, OUTPUT_LOGITS
+    
+loop_out:
+    LDI.W R5, 0             ; Dot Sum
+    LDI.W R6, 0             ; Col Index (0..15 Hidden)
+    LDI.W R7, HIDDEN_STATE
+    
+out_dot:
+    LD.W R8, [R7, R6]       ; Hidden[Col]
+    
+    MUL.W R9, R2, 16        ; W_ho has 16 cols
+    ADD.W R9, R9, R3
+    LD.W R9, [R9, R6]       ; Weight
+    
+    MUL.W R8, R8, R9
+    ADD.W R5, R5, R8
+    
+    ADD.W R6, R6, 1
+    CMP.W R6, 16
+    BLT out_dot
+    
+    ST.W R5, [R4, R2]
+    
+    ADD.W R2, R2, 1
+    CMP.W R2, 8
+    BLT loop_out
+    
+    ; POP R4..R1
+    LD.W R4, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R3, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R2, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R1, [SP, 0]
+    ADD.W SP, SP, 1
+    RET
+
+; --- Subroutine: Argmax ---
+argmax:
+    ; PUSH R2..R4
+    ADD.W SP, SP, -1
+    ST.W R2, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R3, [SP, 0]
+    ADD.W SP, SP, -1
+    ST.W R4, [SP, 0]
+    
+    LDI.W R2, 0             ; Index
+    LDI.W R3, OUTPUT_LOGITS
+    
+    LDI.W R1, 0             ; Best Index
+    LD.W R4, [R3, 0]        ; Best Value (init with Index 0)
+    
+loop_argmax:
+    ADD.W R2, R2, 1
+    CMP.W R2, 8
+    BGT end_argmax          ; If Index > 7
+    BEQ end_argmax
+    
+    LD.W R5, [R3, R2]       ; Current Value
+    CMP.W R5, R4            ; Curr vs Best
+    BGT found_new_max
+    JMP loop_argmax
+    
+found_new_max:
+    MOV.W R4, R5            ; Update Best Value
+    MOV.W R1, R2            ; Update Best Index
+    JMP loop_argmax
+    
+end_argmax:
+    ; POP R4..R2
+    LD.W R4, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R3, [SP, 0]
+    ADD.W SP, SP, 1
+    LD.W R2, [SP, 0]
+    ADD.W SP, SP, 1
+    RET
+
+; --- Variables (RAM) ---
+.ORG 0x1000
+HIDDEN_STATE: .DAT 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0  ; 16 trits (Initialized to 0)
+INPUT_VEC:    .DAT 0 0 0 0 0 0 0 0                  ; One-hot input (8 trits)
+OUTPUT_LOGITS:.DAT 0 0 0 0 0 0 0 0                  ; Output logits (8 trits)
+TEMP_ACC:     .DAT 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0  ; Accumulator for H2H + I2H
+
+; Include Weights (Must include W_ih, W_hh, W_ho labels)
+.ORG 0x2000
+.INCLUDE "experiments/nlp/rnn_weights.dat"

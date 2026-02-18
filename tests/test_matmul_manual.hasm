@@ -1,0 +1,50 @@
+
+.ORG 0x0000
+LDI.W SP, 0x6000
+
+; Init A[0] (8192) = 2
+LDI.W R1, 2
+LDI.W R2, 8192
+ST.W R1, [R2, 0]
+
+; Init A[1] (8193) = 2
+LDI.W R1, 2
+LDI.W R2, 8193
+ST.W R1, [R2, 0]
+
+; Init B[0] (8196) = 3
+LDI.W R1, 3
+LDI.W R2, 8196
+ST.W R1, [R2, 0]
+
+; Init B[2] (8198 - corresponding to row 1, col 0) = 3
+LDI.W R1, 3
+LDI.W R2, 8198
+ST.W R1, [R2, 0]
+
+
+; Calculate C[0,0] = A[0]*B[0] + A[1]*B[2]
+; Accumulator R10 = 0
+LDI.W R10, 0
+
+; Term 1: A[0] * B[0]
+LDI.W R6, 8192
+LD.W R1, [R6, 0] ; Val A
+LDI.W R7, 8196
+LD.W R2, [R7, 0] ; Val B
+MUL.W R1, R1, R2 ; Mul
+ADD.W R10, R10, R1 ; Acc
+
+; Term 2: A[1] * B[2]
+LDI.W R6, 8193
+LD.W R1, [R6, 0] ; Val A
+LDI.W R7, 8198
+LD.W R2, [R7, 0] ; Val B
+MUL.W R1, R1, R2 ; Mul
+ADD.W R10, R10, R1 ; Acc
+
+; Store C[0,0] at 8200
+LDI.W R8, 8200
+ST.W R10, [R8, 0]
+
+HLT

@@ -258,8 +258,9 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         
         case Opcode::CMP: {
              metrics.active_cycles++;
-             TernaryWord neg_rs2 = Rs2.Negate();
-             TernaryWord res = Rs1.Add(neg_rs2);
+             // Fix: Use Op2 (resolved based on mode) instead of Rs2 (raw register)
+             TernaryWord neg_op2 = Op2.Negate();
+             TernaryWord res = Rs1.Add(neg_op2);
              UpdateFlagsArithmetic(res, false, false);
              break;
         }
@@ -267,14 +268,14 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         // Cognitive (Phase 6)
         case Opcode::CNS: {
             metrics.active_cycles++;
-            Rd = Rs1.Consensus(Rs2);
+            Rd = Rs1.Consensus(Op2);
             UpdateFlags(Rd);
             writeback = true; new_rd_val = Rd;
             break;
         }
         case Opcode::DEC: {
             metrics.active_cycles++;
-            Rd = Rs1.Decay(Rs2); 
+            Rd = Rs1.Decay(Op2); 
             UpdateFlags(Rd);
             writeback = true; new_rd_val = Rd;
             break;
@@ -289,7 +290,7 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
         }
         case Opcode::SAT: {
             metrics.active_cycles++;
-            Rd = Rs1.SaturatingAdd(Rs2);
+            Rd = Rs1.SaturatingAdd(Op2);
             UpdateFlagsArithmetic(Rd, false, false);
             writeback = true; new_rd_val = Rd;
             break;

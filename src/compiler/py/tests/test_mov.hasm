@@ -1,0 +1,8 @@
+.ORG 0
+ADD.W SP, SP, -1
+ST.W FP, [SP, 0]
+MOV.W FP, SP
+ADD.W SP, SP, -1
+ST.W R14, [SP, 0]
+LD.W R1, [FP, 1]
+HLT

@@ -1,0 +1,15 @@
+
+.ORG 0x0000
+; Test Memory
+LDI.W R1, 2
+LDI.W R2, 8192
+ST.W R1, [R2, 0]
+LDI.W R3, 0
+LD.W R3, [R2, 0]
+
+; Test Mul
+LDI.W R4, 2
+LDI.W R5, 3
+MUL.W R6, R4, R5
+
+HLT

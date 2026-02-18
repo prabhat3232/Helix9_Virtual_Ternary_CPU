@@ -2,8 +2,7 @@
 #include <iostream>
 #include <vector>
 
-using namespace Helix;
-using namespace Helix::Assembler;
+
 
 bool CheckMem(TernaryMemory& mem, int64_t addr, int64_t expected, const std::string& name) {
     int64_t val = mem.Read(TernaryWord::FromInt64(addr)).ToInt64();

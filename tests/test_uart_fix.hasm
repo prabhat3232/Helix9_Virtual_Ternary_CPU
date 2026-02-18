@@ -1,0 +1,22 @@
+
+.ORG 0x0000
+LDI.W SP, 0x6000
+
+; Construct Address 32768 (0x8000)
+; Max LDI is ~29524
+LDI.W R2, 16384
+ADD.W R2, R2, R2 ; R2 = 32768
+
+; Print 'H' (72)
+LDI.W R1, 72
+ST.W R1, [R2, 0]
+
+; Print 'i' (105)
+LDI.W R1, 105
+ST.W R1, [R2, 0]
+
+; Print '\n' (10)
+LDI.W R1, 10
+ST.W R1, [R2, 0]
+
+HLT

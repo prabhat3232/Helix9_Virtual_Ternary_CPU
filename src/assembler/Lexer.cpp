@@ -160,6 +160,7 @@ Token Lexer::TokenizeIdentifier() {
     else if (lower == "sp") { token.type = TokenType::REGISTER; token.intValue = 13; }
     else if (lower == "lr") { token.type = TokenType::REGISTER; token.intValue = 14; }
     else if (lower == "pc") { token.type = TokenType::REGISTER; token.intValue = 15; }
+    else if (lower == "fp") { token.type = TokenType::REGISTER; token.intValue = 12; }
     else {
         token.type = TokenType::IDENTIFIER;
     }

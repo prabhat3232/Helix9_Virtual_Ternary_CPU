@@ -1,0 +1,9 @@
+.ORG 0
+LDI.W R1, 0
+CMP.W R1, 0
+BEQ target
+LDI.W R1, 2 ; Fail
+HLT
+target:
+LDI.W R1, 5 ; Success
+HLT

@@ -1,0 +1,6 @@
+
+.ORG 0x0000
+main:
+    LDI.W R1, 10
+    ST.W R1, [FP, -1]
+    HLT
