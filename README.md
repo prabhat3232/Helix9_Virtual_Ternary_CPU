@@ -64,7 +64,14 @@ A cycle-accurate simulator of the Helix CPU.
 
 ### 3.4 Benchmarks (`helix_bench`)
 A harness for verifying performance metrics.
-*   **Capabilities**: Cycle counting, MIPS calculation, Vector Latency modeling.
+
+### 3.5 Python Compiler (`helix_py_compiler`)
+Compiles a subset of Python 3 into Helix Assembly (`.hasm`).
+*   **Features**:
+    *   Variables, Integers, loops (`while`), conditionals (`if`).
+    *   **Matrix Support**: Native 2D Matrix declaration (`Matrix[R,C]`) and Element Access (`A[i,j]`).
+    *   **Output**: standard `print()` support.
+*   **Usage**: `python src/compiler/py/helix_py_compiler.py input.py`
 
 ---
 
@@ -139,6 +146,12 @@ cmake --build . --config Debug
 ./build/Debug/resonance_exp  # Run Exp 3
 ```
 
+### Running Python Scripts
+Use the automated pipeline script to Compile, Assemble, and Emulate Python code in one step:
+```bash
+python run_helix.py tests/test_matrix_access.py
+```
+
 ---
 
 ## 7. Verification Suite
@@ -164,7 +177,7 @@ ctest -C Debug --output-on-failure
 
 ## 8. Future Roadmap
 *   **FPGA Implementation**: Synthesize the core to physical hardware (Verilog/VHDL).
-*   **Advanced Compiler**: Port a subset of C/Rust to Helix Assembly.
+*   **Advanced Compiler**: Complete Python support (MNIST Inference) and explore C/Rust subsets.
 *   **Neural Network Layer**: Implement a complete Ternary Neural Network (TNN) using the Vector Unit.
 
 ## 9. Acknowledgments
