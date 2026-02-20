@@ -1,4 +1,4 @@
-# Helix9: Virtual Ternary CPU & Cognitive Architecture
+# Helix9: Balanced Ternary AI Accelerator & VM
 **Status**: Research Prototype v1.0 (Phase 11 Complete)
 **License**: MIT
 **Methodology**: 100% Vibe Coding (AI-Agent Driven Development)
