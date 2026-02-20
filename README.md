@@ -6,6 +6,9 @@
 
 ---
 
+> 🚧 **Experimental Research Software — Not for Production**
+> *Helix9 is a cycle-accurate software simulation of a balanced ternary processor and AI engine, not physical silicon. All performance metrics are based on emulation cycles, not microarchitectural silicon measurements.*
+
 ## 1. Overview
 **Helix9** is an experimental Virtual Machine architecture designed to evaluate the computational trade-offs of **Balanced Ternary Logic** (`-1, 0, +1`) for sparse neural and multi-agent workloads.
 
@@ -53,10 +56,14 @@ While Helix9 is a research architecture, its ternary foundation offers concrete 
 ### 2.1 The Ternary ISA
 The Instruction Set Architecture is designed around 42-bit (27-trit) instructions.
 
-**Encoding Format:**
-```text
-| OPCODE (6 Trits) | MODE (3 Trits) | RD (4 Trits) | RS1 (4 Trits) | RS2 / IMM (10 Trits) |
-```
+**Instruction Encoding (27 Trits):**
+| Field | Width (Trits) | Description |
+| :--- | :--- | :--- |
+| **Opcode** | 6 | Instruction ID (0-81) |
+| **Mode**   | 3 | Addressing Mode (0=Reg, 1=Imm) |
+| **Rd**     | 4 | Destination Register (V0-V3, R0-R15) |
+| **Rs1**    | 4 | Source Register 1 |
+| **Rs2/Imm**| 10| Source Register 2 or Immediate Value |
 
 *   **Arithmetic**: `ADD`, `SUB`, `MUL`, `DIV`, `MOD` (Signed Balanced Ternary - No Two's Complement required).
 *   **Logic**: `AND` (Min), `OR` (Max), `XOR` (Sum Modulo 3).
@@ -106,13 +113,16 @@ Compiles a subset of Python 3 into Helix Assembly (`.hasm`).
     *   **Output**: standard `print()` support.
 *   **Usage**: `python src/compiler/py/helix_py_compiler.py input.py`
 
-### 3.6 TNN Graph Compiler (`HelixRuntime`)
-A native execution orchestrator that loads `.htnn` models, applies Operator Fusion (`Dense` + `Sign` -> `VMMSGN`), statically allocates non-overlapping pages in the Ternary Virtual Memory, and emits native Helix9 opcode structs directly into executable memory, eliminating assembler overhead and C++ layer simulation.
-
-
 ---
 
-## 4. The Cognitive Runtime Kernel
+## 4. Software Implementation: TNN Graph Compiler & Runtime System
+
+The Helix9 repository includes a complete C++ software toolchain to validate the architectural designs. 
+
+### 4.1 TNN Graph Compiler (`HelixRuntime`)
+A native execution orchestrator that loads `.htnn` models, applies Operator Fusion (`Dense` + `Sign` -> `VMMSGN`), statically allocates non-overlapping pages in the Ternary Virtual Memory, and emits native Helix9 opcode structs directly into executable memory, eliminating assembler overhead and C++ layer simulation.
+
+### 4.2 The Cognitive Runtime Kernel
 The **Kernel** serves as a simulation runtime for experiments rather than a bare-metal OS (hardware-level traps and context restoration are simulated). It manages the lifecycle of thousands of autonomous agents.
 
 *   **Scheduler**: Implements "Cognitive Time-Slicing". Agents are scheduled based on their **Flux** (rate of state change)—active agents get more CPU time, stable agents sleep.
@@ -170,6 +180,12 @@ Benchmarks verify the efficiency of the Cognitive Primitives.
 | **Matrix Fused (N=32x32)** | 1058 | Fused `VMMSGN` (**3% Absolute Speedup**)* |
 
 *\*Note on Fusion: The 3% `VMMSGN` fusion gain at N=32x32 reflects that memory bandwidth (loading ternary weights) dominates the cycle-time bounds compared to the negligible arithmetic cost of the Sign function. However, the fusion entirely bypasses intermediate memory store-load roundtrips, critical for strict zero-copy inference.*
+
+### Appendix B: Neural Network Benchmarks Methodology
+*   **Architecture**: 2-Layer Dense Network (2x2) with Ternary Sign Activation.
+*   **Precision**: Weights, Biases, and Activations quantized strictly to `{-1, 0, 1}`.
+*   **Measurement**: Cycle counts captured via internal hardware `Cpu::metrics.active_cycles` counter, excluding Memory I/O pipeline latency and initialization overhead.
+*   **Dataset Control**: Synthetically generated static ternary tensors initialized uniformly to avoid zero-bias compression skewing.
 
 **Conclusion**: The hardware Vector Unit delivers a verified **4.6x - 10x Speedup** for cognitive and neural workloads over scalar baselines.
 
