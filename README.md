@@ -1,11 +1,12 @@
 # Helix9: Virtual Ternary CPU & Cognitive Architecture
-**Status**: Research Prototype v1.0 (Phase 8 Complete)
+**Status**: Research Prototype v1.0 (Phase 11 Complete)
 **License**: MIT
+**Methodology**: 100% Vibe Coding (AI-Agent Driven Development)
 
 ---
 
 ## 1. Overview
-**Helix9** is an experimental Virtual Machine architecture designed to explore the advantages of **Balanced Ternary Logic** (`-1, 0, +1`) in Artificial Intelligence and Cognitive Emulation.
+**Helix9** is an experimental Virtual Machine architecture designed to evaluate the computational trade-offs of **Balanced Ternary Logic** (`-1, 0, +1`) for sparse neural and multi-agent workloads.
 
 Unlike traditional binary systems that force "True/False" dichotomies, Helix9 natively represents "Positive", "Negative", and "Unknown" states. This ternary foundation allows for highly efficient modeling of **Consensus**, **Decay**, and **Weighted Belief Systems** directly in hardware, reducing the computational complexity of large-scale agent simulations.
 
@@ -14,8 +15,7 @@ Unlike traditional binary systems that force "True/False" dichotomies, Helix9 na
 *   **Cognitive Primitives**: Hardware instructions for `CNS` (Consensus), `DEC` (Decay), and `POP` (Ternary PopCount).
 *   **Vector Acceleration**: A dedicated Vector Unit (SIMD) for cognitive operations, achieving **10x speedups** over scalar emulation.
 *   **Cognitive Runtime Kernel**: A lightweight OS layer optimized for massive multi-agent scheduling and memory management.
-
-*   **Cognitive Runtime Kernel**: A lightweight OS layer optimized for massive multi-agent scheduling and memory management.
+*   **TNN Graph Compiler**: Directly compiles abstract neural network descriptions (`.htnn`) into native, fused Helix9 assembly executed directly on the Vector Unit.
 
 ### Real-World Applications
 While Helix9 is a research architecture, its ternary foundation offers concrete advantages for specific domains:
@@ -27,8 +27,36 @@ While Helix9 is a research architecture, its ternary foundation offers concrete 
 ---
 
 ## 2. Architecture
+
+```text
++-----------------------------------------------------------+
+|                    TNN Graph Compiler                     |
+|  .htnn Models -> Fused IR -> Opcode Mapping (0x4000)      |
++-----------------------------------------------------------+
+                            |  Instruction Stream
++-----------------------------------------------------------+
+|           Helix9 Virtual CPU (27-Trit Architecture)       |
+|                                                           |
+|  +---------------+  +---------------+  +---------------+  |
+|  |  Scalar Core  |  |  Vector Unit  |  | Cognitive ALU |  |
+|  |  Registers 16 |  |  V0-V3 (1024) |  |   CNS, DEC    |  |
+|  +---------------+  +---------------+  +---------------+  |
++-----------------------------------------------------------+
+                            |  12KB Bus
++-----------------------------------------------------------+
+|              Sparse Ternary Memory (Pages)                |
+|  [0x0000: OS/Kernel]  [0x2000: Tensor Heap]               |
++-----------------------------------------------------------+
+```
+
 ### 2.1 The Ternary ISA
 The Instruction Set Architecture is designed around 42-bit (27-trit) instructions.
+
+**Encoding Format:**
+```text
+| OPCODE (6 Trits) | MODE (3 Trits) | RD (4 Trits) | RS1 (4 Trits) | RS2 / IMM (10 Trits) |
+```
+
 *   **Arithmetic**: `ADD`, `SUB`, `MUL`, `DIV`, `MOD` (Signed Balanced Ternary - No Two's Complement required).
 *   **Logic**: `AND` (Min), `OR` (Max), `XOR` (Sum Modulo 3).
 *   **Cognitive**:
@@ -40,6 +68,7 @@ The Instruction Set Architecture is designed around 42-bit (27-trit) instruction
     *   `VLDR`/`VSTR`: Vector Load/Store (Length=32).
     *   `VADD`: Vector Addition.
     *   `VDOT`: Vector Dot Product (TNN Acceleration).
+    *   `VMMUL`/`VMMSGN`: Vector-Matrix Multiplication (with explicit Fused Ternary Sign Activation bypassing memory).
 
 ### 2.2 Memory Model
 *   **Sparse Cognitive Pages**: Memory is organized into 256-word pages. Pages are allocated on-demand, allowing sparse agent states (90% memory savings for inactive agents).
@@ -76,10 +105,14 @@ Compiles a subset of Python 3 into Helix Assembly (`.hasm`).
     *   **Output**: standard `print()` support.
 *   **Usage**: `python src/compiler/py/helix_py_compiler.py input.py`
 
+### 3.6 TNN Graph Compiler (`HelixRuntime`)
+A native execution orchestrator that loads `.htnn` models, applies Operator Fusion (`Dense` + `Sign` -> `VMMSGN`), statically allocates non-overlapping pages in the Ternary Virtual Memory, and emits native Helix9 opcode structs directly into executable memory, eliminating assembler overhead and C++ layer simulation.
+
+
 ---
 
 ## 4. The Cognitive Runtime Kernel
-The **Kernel** serves as the Operating System for the Helix architecture, managing the lifecycle of thousands of autonomous agents.
+The **Kernel** serves as a simulation runtime for experiments rather than a bare-metal OS (hardware-level traps and context restoration are simulated). It manages the lifecycle of thousands of autonomous agents.
 
 *   **Scheduler**: Implements "Cognitive Time-Slicing". Agents are scheduled based on their **Flux** (rate of state change)—active agents get more CPU time, stable agents sleep.
 *   **Memory Manager**: Handles page faults and allocation for agent beliefs/vectors.
@@ -105,6 +138,12 @@ We validated the architecture through a series of "Cognitive Experiments".
 *   **Result**: **95.5% Accuracy** in signal detection.
 *   **Insight**: The `POP` (PopCount) instruction provided a robust metric for "Confidence" in the locked signal.
 
+### Appendix A: Methodology for Reproducibility
+*   **Swarm Density**: 100 autonomous agents.
+*   **Environment Grid**: 64x64 discrete ternary map layout.
+*   **Simulation Length**: Verified over 100-3000 iterative sense-act cycles.
+*   **Noise Model**: 30% uniform random bit-flip distribution on input percepts to test `Consensus` resilience.
+
 ---
 
 ## 6. Performance Benchmarks
@@ -112,17 +151,26 @@ We validated the architecture through a series of "Cognitive Experiments".
 
 Benchmarks verify the efficiency of the Cognitive Primitives.
 
+### Group 1: Scalar Baseline
 | Benchmark | Cycles | Notes |
 | :--- | :--- | :--- |
 | **Base Arithmetic** | 4006 | Baseline scalar performance. |
 | **Cognitive Ops** | 6006 | Scalar Implementation of `CNS`/`DEC`. |
-| **Agent Cycle** | 5908 | Full Sense-Act loop (100 iterations). |
-| **Vector Soft (N=256)** | 2567 | Scalar loop processing 256 elements. |
-| **Vector Hard (N=256)** | 260 | Hardware `VEC.CNS` (Simulated). |
 | **Scalar Dot (N=32)** | 453 | Baseline Loop for TNN. |
-| **Vector Dot (N=32)** | 98 | **4.6x Speedup** using `VDOT`. |
+| **Agent Cycle** | 5908 | Full Sense-Act loop (100 iterations). |
 
-**Conclusion**: The Vector Unit delivers a verified **4.6x - 10x Speedup** for cognitive workloads.
+### Group 2: Vector Acceleration
+| Benchmark | Cycles | Notes |
+| :--- | :--- | :--- |
+| **Vector Soft (N=256)** | 2567 | Scalar loop processing 256 elements. |
+| **Vector Hard (N=256)** | 260 | Hardware `VEC.CNS` (**~10x Speedup**). |
+| **Vector Dot (N=32)** | 98 | Hardware `VDOT` (**4.6x Speedup**). |
+| **Matrix Traditional (N=32x32)** | 1090 | `VMMUL` followed by `VSIGN`. |
+| **Matrix Fused (N=32x32)** | 1058 | Fused `VMMSGN` (**3% Absolute Speedup**)* |
+
+*\*Note on Fusion: The 3% `VMMSGN` fusion gain at N=32x32 reflects that memory bandwidth (loading ternary weights) dominates the cycle-time bounds compared to the negligible arithmetic cost of the Sign function. However, the fusion entirely bypasses intermediate memory store-load roundtrips, critical for strict zero-copy inference.*
+
+**Conclusion**: The hardware Vector Unit delivers a verified **4.6x - 10x Speedup** for cognitive and neural workloads over scalar baselines.
 
 ---
 
@@ -141,15 +189,15 @@ cmake --build . --config Debug
 
 ### Running the Emulator
 ```bash
-./build/Debug/helix_emu tests/test_alu.exe
+./build/bin/Debug/helix_emu tests/test_alu.exe
 ```
 
 ### Running Experiments
 ```bash
-./build/Debug/seeker_2d      # Run Exp 1
-./build/Debug/swarm_exp      # Run Exp 2
-./build/Debug/resonance_exp  # Run Exp 3
-./build/Debug/tnn_benchmark  # Run TNN Vector Benchmark
+./build/bin/Debug/seeker_2d      # Run Exp 1
+./build/bin/Debug/swarm_exp      # Run Exp 2
+./build/bin/Debug/resonance_exp  # Run Exp 3
+./build/bin/Debug/tnn_benchmark  # Run TNN Vector Benchmark
 ```
 
 ### Running Python Scripts
@@ -184,11 +232,11 @@ ctest -C Debug --output-on-failure
 ## 8. Future Roadmap
 *   **FPGA Implementation**: Synthesize the core to physical hardware (Verilog/VHDL).
 *   **Advanced Compiler**: Complete Python support (MNIST Inference) and explore C/Rust subsets.
-*   **Neural Network Layer**: Implement a complete Ternary Neural Network (TNN) using the Vector Unit.
+*   **Dynamic Tensor Batching**: Expand the Graph Compiler `VSTRIDE` utilization to allow multi-batch TNN inferences.
 
 ## 9. Acknowledgments
 Developed by **Prabhat**.
 Copyright 2026 Prabhat.
 
-Designed for **Advanced Agentic Coding** research.
+Designed for **Advanced Agentic Coding** research and built entirely via **Vibe Coding**.
 

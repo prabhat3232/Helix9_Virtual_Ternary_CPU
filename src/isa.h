@@ -76,6 +76,7 @@ enum class Opcode {
     VSIGN = 37, // Vector Sign (Ternary Activation)
     VCLIP = 38, // Vector Clip (Hard Tanh)
     VSTRI = 39, // Set Vector Stride
+    VMMSGN = 40, // Vector-Matrix Multiply with Sign Activation
     
     UNKNOWN = 99
 };

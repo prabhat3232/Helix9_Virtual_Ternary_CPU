@@ -88,6 +88,42 @@ TernaryWord TernaryMemory::Read(const TernaryWord& address) {
     return TernaryWord::FromInt64(0);
 }
 
+TernaryWord* TernaryMemory::GetRawPointer(const TernaryWord& address, int length) {
+    int64_t addr = address.ToInt64();
+    if (length <= 0) return nullptr;
+    
+    // 1. System Memory fast-path (Flat)
+    if (addr < 0x3000) {
+        if (addr >= 0 && (addr + length) <= (int64_t)system_memory.size()) {
+            return &system_memory[addr];
+        }
+        return nullptr;
+    }
+    
+    // 2. Cognitive Memory (Paged)
+    auto pair = DecodeAddress(address);
+    int64_t page_id = pair.first;
+    int64_t offset = pair.second;
+    
+    // If the contiguous block crosses a page boundary, reject it.
+    // Length must fit within the remainder of the page.
+    if (offset + length > PAGE_SIZE) {
+        return nullptr; // Caller must fallback to safe Read()
+    }
+    
+    if (IsPageAllocated(page_id)) {
+        auto& p = cognitive_pages[page_id];
+        // Permission Check (Read)
+        if (current_context_id != 0 && current_context_id != p->owner_id) {
+            return nullptr; // Denied (Caller should use Read() to get access violation error print)
+        }
+        return &p->words[offset];
+    }
+    
+    return nullptr; // Unallocated
+}
+
+
 void TernaryMemory::Write(const TernaryWord& address, const TernaryWord& value) {
     int64_t addr = address.ToInt64();
     

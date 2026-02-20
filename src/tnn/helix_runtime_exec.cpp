@@ -1,6 +1,7 @@
 #include "helix_runtime.h"
 #include "../cpu.h"
 #include "../memory.h"
+#include "graph_optimizer.h"
 #include <iostream>
 
 namespace Helix {
@@ -10,95 +11,59 @@ std::vector<TernaryWord> HelixRuntime::Execute(const TNNModel& model, const std:
     TernaryMemory mem;
     Cpu cpu(mem);
 
-    // 2. Memory Layout Map
-    // We place inputs at 0x1000, outputs at 0x2000, weights at 0x3000
-    int64_t input_addr = 0x1000;
-    int64_t output_addr = 0x2000;
-    int64_t weight_addr = 0x3000;
+    // 2. Compilation Passes
+    std::cout << "[Compiler] Pass 1: Building Graph IR..." << std::endl;
+    std::vector<GraphNode> ir = GraphCompiler::BuildIR(model);
     
-    std::vector<TernaryWord> current_input = input;
-
-    // Process layer by layer
-    for (size_t l_idx = 0; l_idx < model.layers.size(); ++l_idx) {
-        const auto& layer = model.layers[l_idx];
+    std::cout << "[Compiler] Pass 2: Optimizing IR (Fusion)..." << std::endl;
+    std::vector<GraphNode> optimized_ir = GraphCompiler::OptimizeIR(ir);
+    
+    std::cout << "[Compiler] Pass 3: Static Memory Planning..." << std::endl;
+    int64_t input_addr = 0x1000;
+    int64_t tensor_addr = 0x2000;
+    int64_t program_addr = 0x4000;
+    GraphCompiler::PlanMemory(optimized_ir, mem, model, input_addr, tensor_addr);
+    
+    std::cout << "[Compiler] Pass 4: Generating Program Opcodes..." << std::endl;
+    GraphCompiler::GenerateProgram(optimized_ir, mem, program_addr);
+    
+    // 3. Execution Phase
+    // Write initial input to the planned input address of the first node
+    int64_t first_input_addr = optimized_ir.empty() ? input_addr : optimized_ir[0].input_addr;
+    for (size_t i = 0; i < input.size(); ++i) {
+         mem.Write(TernaryWord::FromInt64(first_input_addr + i), input[i]);
+    }
+    
+    // Set Vector Length for the CPU (Hardware config assumed uniform for now)
+    // In a real Mixed-Dimensional model, we need a VSETL opcode injected 
+    // inside GenerateProgram. For Phase 11, we set it manually before run.
+    if (!model.layers.empty()) {
+        cpu.vector_length = model.layers[0].input_size; // Or extract from IR
+    }
+    
+    std::cout << "[Runtime] Executing Compiled Graph on Virtual CPU at 0x4000..." << std::endl;
+    cpu.pc = TernaryWord::FromInt64(program_addr);
+    cpu.halted = false;
+    cpu.trace_enabled = false;
+    cpu.metrics.active_cycles = 0;
+    cpu.Run(10000); // 10k max cycles safety limit
+    
+    std::cout << "[Runtime] Execution Complete. Active Cycles: " << cpu.metrics.active_cycles << std::endl;
+    
+    // 4. Extract Output
+    std::vector<TernaryWord> result;
+    if (!optimized_ir.empty()) {
+        const GraphNode& last_node = optimized_ir.back();
+        int out_size = last_node.dim_output;
+        int64_t out_addr = last_node.output_addr;
         
-        // Write Input to Memory
-        for (size_t i = 0; i < current_input.size(); ++i) {
-             mem.Write(TernaryWord::FromInt64(input_addr + i), current_input[i]);
-        }
-
-        if (layer.type == "Dense") {
-             // 1. Write Weights to Memory
-             for (size_t i = 0; i < layer.weights.size(); ++i) {
-                 mem.Write(TernaryWord::FromInt64(weight_addr + i), layer.weights[i]);
-             }
-
-             // 2. Configure Vector Unit
-             // In a real scenario, we'd feed assembly instructions to the CPU.
-             // Here, we simulate the `VMMUL` instruction execution wrapper
-             // The vector_length must match the layer size.
-             cpu.vector_length = layer.input_size;
-             
-             // Base Rs1 (Input Vector)
-             cpu.regs[1] = TernaryWord::FromInt64(input_addr);
-             // Base Rs2 (Matrix Base)
-             cpu.regs[2] = TernaryWord::FromInt64(weight_addr);
-             
-             // Execute Sequence:
-             // VLDR V0, R1
-             cpu.regs[10] = TernaryWord::FromInt64(0x21404000); // Hack: Opcode 32, Mode 0, Rd 0, Rs1 1
-             // VMMUL V1, V0, R2
-             cpu.regs[11] = TernaryWord::FromInt64(0x24C10800); // Hack: Opcode 36, Mode 0, Rd 1, Rs1 0, Rs2 2
-             
-             // Instead of assembling, we just call the helper logic directly
-             // Or write a small inline assembly to memory and run.
-             // Let's use direct C++ simulation for the runtime orchestrator:
-             
-             std::vector<TernaryWord> v_out(layer.output_size);
-             for(int row = 0; row < layer.output_size; ++row) {
-                  int64_t sum = 0;
-                  int64_t row_base = weight_addr + (row * layer.input_size);
-                  
-                  for(int col = 0; col < layer.input_size; ++col) {
-                       int64_t in_val = current_input[col].ToInt64();
-                       int64_t w_val = mem.Read(TernaryWord::FromInt64(row_base + col)).ToInt64();
-                       sum += in_val * w_val;
-                  }
-                  
-                  // Apply Bias
-                  if (!layer.biases.empty() && row < layer.biases.size()) {
-                       sum += layer.biases[row].ToInt64();
-                  }
-                  
-                  v_out[row] = TernaryWord::FromInt64(sum);
-             }
-             
-             current_input = v_out; // Pass to next layer
-             
-        } else if (layer.type == "Activation_Sign") {
-             // VSIGN Vd, Vs
-             std::vector<TernaryWord> v_out(layer.output_size);
-             for(int i = 0; i < current_input.size(); ++i) {
-                  int64_t val = current_input[i].ToInt64();
-                  int64_t sign = (val > 0) ? 1 : ((val < 0) ? -1 : 0);
-                  v_out[i] = TernaryWord::FromInt64(sign);
-             }
-             current_input = v_out;
-        } else if (layer.type == "Activation_Clip") {
-             // VCLIP
-             std::vector<TernaryWord> v_out(layer.output_size);
-             int64_t limit = 1; // Default
-             for(int i = 0; i < current_input.size(); ++i) {
-                  int64_t val = current_input[i].ToInt64();
-                  if (val > limit) val = limit;
-                  if (val < -limit) val = -limit;
-                  v_out[i] = TernaryWord::FromInt64(val);
-             }
-             current_input = v_out;
+        result.resize(out_size);
+        for(int i = 0; i < out_size; ++i) {
+            result[i] = mem.Read(TernaryWord::FromInt64(out_addr + i));
         }
     }
-
-    return current_input; // Final output
+    
+    return result;
 }
 
 } // namespace Helix

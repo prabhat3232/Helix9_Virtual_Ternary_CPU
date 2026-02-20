@@ -15,13 +15,13 @@ if %ERRORLEVEL% EQU 0 (
             echo Build Successful! Running tests...
             echo.
             echo [ALU Test]
-            Debug\test_alu.exe || ./test_alu
+            bin\Debug\test_alu.exe || ./bin/test_alu
             echo.
             echo [CPU Test]
-            Debug\test_cpu.exe || ./test_cpu
+            bin\Debug\test_cpu.exe || ./bin/test_cpu
             echo.
             echo [AI Test]
-            Debug\test_ai.exe || ./test_ai
+            bin\Debug\test_ai.exe || ./bin/test_ai
             echo.
             @REM echo [Graphics Test]
             @REM Debug\test_graphics.exe || ./test_graphics
@@ -29,10 +29,10 @@ if %ERRORLEVEL% EQU 0 (
             
             echo.
             echo [MLP Demo]
-            Debug\demo_mlp.exe || ./demo_mlp
+            bin\Debug\demo_mlp.exe || ./bin/demo_mlp
             echo.
             echo [Learning Demo]
-            Debug\demo_learning.exe || ./demo_learning
+            bin\Debug\demo_learning.exe || ./bin/demo_learning
             goto :end
         )
     )

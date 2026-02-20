@@ -45,6 +45,11 @@ public:
     TernaryWord Read(const TernaryWord& address);
     void Write(const TernaryWord& address, const TernaryWord& value);
     
+    // Raw Access for Vector Unit Performance
+    // Returns a raw pointer if 'length' words are contiguous and safe to access.
+    // Returns nullptr if crossing a page boundary or unallocated.
+    TernaryWord* GetRawPointer(const TernaryWord& address, int length);
+    
     // Sparse Helpers
     bool IsPageAllocated(int64_t page_id) const;
     void AllocatePage(int64_t page_id);

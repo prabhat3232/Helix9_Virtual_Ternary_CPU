@@ -12,7 +12,6 @@ MOV.W FP, SP
 ADD.W SP, SP, -1
 ST.W R14, [SP, 0]
 ; Declared Matrix A [2x2] at .DAT 8192
-; Declared Matrix A [2x2] at .DAT 8192
 LDI.W R1, 1
 ADD.W SP, SP, -1
 ST.W R1, [SP, 0]

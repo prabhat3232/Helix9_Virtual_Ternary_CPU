@@ -28,6 +28,8 @@ add_library(helix9_core
     src/tnn/helix_runtime.cpp
     src/tnn/helix_runtime_exec.cpp
     src/tnn/helix_runtime.h
+    src/tnn/graph_optimizer.cpp
+    src/tnn/graph_optimizer.h
 )
 
 # Python Bindings (DLL)

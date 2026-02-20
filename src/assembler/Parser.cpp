@@ -373,6 +373,7 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         {"vsign", (int)Opcode::VSIGN},
         {"vclip", (int)Opcode::VCLIP},
         {"vstri", (int)Opcode::VSTRI},
+        {"vmmsgn", (int)Opcode::VMMSGN},
         
         // Legacy/Other
         {"vec.cns", (int)Opcode::VEC_CNS}, 
@@ -409,9 +410,9 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         }
     }
     // ... Existing logic ...
-    else if (opcode == 36) { // VMMUL
+    else if (opcode == 36 || opcode == 40) { // VMMUL, VMMSGN
         // vmmul vd, vs, rs (Matrix Base)
-        if (ops.size() < 3) { std::cerr << "Error: vmmul requires 3 operands" << std::endl; exit(1); }
+        if (ops.size() < 3) { std::cerr << "Error: vmmul/vmmsgn requires 3 operands" << std::endl; exit(1); }
         rd = ops[0].reg;
         rs1 = ops[1].reg; // Vs
         rs2_imm = ops[2].reg; // Rs (Base) -> Op2

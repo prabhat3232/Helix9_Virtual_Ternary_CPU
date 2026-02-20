@@ -369,27 +369,109 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
             writeback = true; new_rd_val = Rd;
             break;
         }
+        case Opcode::VMMSGN:
         case Opcode::VMMUL: {
-             // VMMUL Vd, Vs, Rs (Base of Matrix)
-             // Vd[i] = Dot(Vs, MatrixRow[i])
              int v_d = rd_idx % 4;
-             int v_s = rs1_idx % 4; // Use Rs1 slot for Source Vector
-             int64_t matrix_base = Op2.ToInt64(); // Mode 0: Rs2/Imm holds Base Reg?
-             // Decode logic puts Regs[rs2] into Op2. Let's assume Matrix Base is in Op2 (Rs2).
-             // Instruction Format: VMMUL Vd, Vs1, Rs2
+             int v_s = rs1_idx % 4; 
+             int64_t matrix_base = Op2.ToInt64();
              
-             metrics.active_cycles += (vector_length * vector_length); // O(N^2) complexity
+             metrics.active_cycles += (vector_length * vector_length);
              vec_regs[v_d].resize(vector_length);
              
-             for(int i=0; i<vector_length; ++i) {
-                 int64_t sum = 0;
-                 // Base address of Row i
-                 int64_t row_base = matrix_base + (i * vector_length);
+             // Extract source vector to fast array for caching
+             std::vector<int64_t> src_vec(vector_length, 0);
+             for(int j = 0; j < vector_length; ++j) {
+                 src_vec[j] = (j < vec_regs[v_s].size()) ? vec_regs[v_s][j].ToInt64() : 0;
+             }
+             
+             // Register Blocking: Process 4 rows at a time
+             int i = 0;
+             for(; i <= vector_length - 4; i += 4) {
+                 int64_t base0 = matrix_base + ((i+0) * vector_length);
+                 int64_t base1 = matrix_base + ((i+1) * vector_length);
+                 int64_t base2 = matrix_base + ((i+2) * vector_length);
+                 int64_t base3 = matrix_base + ((i+3) * vector_length);
                  
-                 for(int j=0; j<vector_length; ++j) {
-                     int64_t vec_val = (j < vec_regs[v_s].size()) ? vec_regs[v_s][j].ToInt64() : 0;
-                     int64_t mat_val = mem.Read(TernaryWord::FromInt64(row_base + j)).ToInt64();
-                     sum += vec_val * mat_val;
+                 TernaryWord* ptr0 = mem.GetRawPointer(TernaryWord::FromInt64(base0), vector_length);
+                 TernaryWord* ptr1 = mem.GetRawPointer(TernaryWord::FromInt64(base1), vector_length);
+                 TernaryWord* ptr2 = mem.GetRawPointer(TernaryWord::FromInt64(base2), vector_length);
+                 TernaryWord* ptr3 = mem.GetRawPointer(TernaryWord::FromInt64(base3), vector_length);
+                 
+                 int64_t sum0 = 0, sum1 = 0, sum2 = 0, sum3 = 0;
+                 
+                 if (ptr0 && ptr1 && ptr2 && ptr3) {
+                     // Fast Path: Loop Unrolling & Raw Memory
+                     int j = 0;
+                     for(; j <= vector_length - 4; j += 4) {
+                         sum0 += src_vec[j+0] * ptr0[j+0].ToInt64();
+                         sum1 += src_vec[j+0] * ptr1[j+0].ToInt64();
+                         sum2 += src_vec[j+0] * ptr2[j+0].ToInt64();
+                         sum3 += src_vec[j+0] * ptr3[j+0].ToInt64();
+
+                         sum0 += src_vec[j+1] * ptr0[j+1].ToInt64();
+                         sum1 += src_vec[j+1] * ptr1[j+1].ToInt64();
+                         sum2 += src_vec[j+1] * ptr2[j+1].ToInt64();
+                         sum3 += src_vec[j+1] * ptr3[j+1].ToInt64();
+
+                         sum0 += src_vec[j+2] * ptr0[j+2].ToInt64();
+                         sum1 += src_vec[j+2] * ptr1[j+2].ToInt64();
+                         sum2 += src_vec[j+2] * ptr2[j+2].ToInt64();
+                         sum3 += src_vec[j+2] * ptr3[j+2].ToInt64();
+
+                         sum0 += src_vec[j+3] * ptr0[j+3].ToInt64();
+                         sum1 += src_vec[j+3] * ptr1[j+3].ToInt64();
+                         sum2 += src_vec[j+3] * ptr2[j+3].ToInt64();
+                         sum3 += src_vec[j+3] * ptr3[j+3].ToInt64();
+                     }
+                     // Remainder columns
+                     for(; j < vector_length; ++j) {
+                         sum0 += src_vec[j] * ptr0[j].ToInt64();
+                         sum1 += src_vec[j] * ptr1[j].ToInt64();
+                         sum2 += src_vec[j] * ptr2[j].ToInt64();
+                         sum3 += src_vec[j] * ptr3[j].ToInt64();
+                     }
+                 } else {
+                     // Slow Path (Page Boundaries / Unaligned)
+                     for(int j = 0; j < vector_length; ++j) {
+                         sum0 += src_vec[j] * mem.Read(TernaryWord::FromInt64(base0 + j)).ToInt64();
+                         sum1 += src_vec[j] * mem.Read(TernaryWord::FromInt64(base1 + j)).ToInt64();
+                         sum2 += src_vec[j] * mem.Read(TernaryWord::FromInt64(base2 + j)).ToInt64();
+                         sum3 += src_vec[j] * mem.Read(TernaryWord::FromInt64(base3 + j)).ToInt64();
+                     }
+                 }
+                 
+                 // Instruction Fusion: Apply Activation Immediately
+                 if (op_val == (int64_t)Opcode::VMMSGN) {
+                     sum0 = (sum0 > 0) ? 1 : ((sum0 < 0) ? -1 : 0);
+                     sum1 = (sum1 > 0) ? 1 : ((sum1 < 0) ? -1 : 0);
+                     sum2 = (sum2 > 0) ? 1 : ((sum2 < 0) ? -1 : 0);
+                     sum3 = (sum3 > 0) ? 1 : ((sum3 < 0) ? -1 : 0);
+                 }
+                 
+                 vec_regs[v_d][i+0] = TernaryWord::FromInt64(sum0);
+                 vec_regs[v_d][i+1] = TernaryWord::FromInt64(sum1);
+                 vec_regs[v_d][i+2] = TernaryWord::FromInt64(sum2);
+                 vec_regs[v_d][i+3] = TernaryWord::FromInt64(sum3);
+             }
+             
+             // Remainder rows
+             for(; i < vector_length; ++i) {
+                 int64_t sum = 0;
+                 int64_t row_base = matrix_base + (i * vector_length);
+                 TernaryWord* ptr = mem.GetRawPointer(TernaryWord::FromInt64(row_base), vector_length);
+                 
+                 if (ptr) {
+                     for(int j = 0; j < vector_length; ++j) {
+                         sum += src_vec[j] * ptr[j].ToInt64();
+                     }
+                 } else {
+                     for(int j = 0; j < vector_length; ++j) {
+                         sum += src_vec[j] * mem.Read(TernaryWord::FromInt64(row_base + j)).ToInt64();
+                     }
+                 }
+                 
+                 if (op_val == (int64_t)Opcode::VMMSGN) {
+                     sum = (sum > 0) ? 1 : ((sum < 0) ? -1 : 0);
                  }
                  vec_regs[v_d][i] = TernaryWord::FromInt64(sum);
              }

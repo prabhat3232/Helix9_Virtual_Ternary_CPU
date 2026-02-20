@@ -135,4 +135,59 @@ int main() {
     
     std::cout << "--- Results ---" << std::endl;
     std::cout << "Speedup: " << (double)scalar_cycles / vector_cycles << "x" << std::endl;
+    
+    // ------------------------------------------
+    // 3. Fusion Benchmark: VMMUL + VSIGN vs VMMSGN
+    // ------------------------------------------
+    std::cout << "\n--- Fusion Optimization Benchmark ---" << std::endl;
+    int64_t matrix_base = 2000;
+    // Init a 32x32 matrix with 1s and -1s
+    for(int i=0; i<vec_len*vec_len; ++i) {
+        mem.Write(TernaryWord::FromInt64(matrix_base + i), TernaryWord::FromInt64( (i%2==0) ? 1 : -1 ));
+    }
+    
+    // Unfused Code
+    uint64_t start_addr_unfused = 20000;
+    cpu.pc = TernaryWord::FromInt64(start_addr_unfused);
+    std::vector<TernaryWord> unfused_code = {
+        Encode((int)Opcode::LDI, 1, 1, 0, addr_v1), // LDI R1, Base1 (Input Vec)
+        Encode((int)Opcode::LDI, 1, 2, 0, matrix_base), // LDI R2, Matrix Base
+        
+        Encode((int)Opcode::VLDR, 0, 0, 1, 0),      // VLDR V0, R1
+        
+        Encode((int)Opcode::VMMUL, 0, 1, 0, 2),     // VMMUL V1, V0, R2
+        Encode((int)Opcode::VSIGN, 0, 1, 1, 0),     // VSIGN V1, V1
+        
+        Encode((int)Opcode::HLT, 0, 0, 0, 0)
+    };
+    for(size_t i=0; i<unfused_code.size(); ++i) mem.Write(TernaryWord::FromInt64(start_addr_unfused + i), unfused_code[i]);
+    
+    cpu.metrics.active_cycles = 0; cpu.halted = false;
+    cpu.Run(100);
+    uint64_t unfused_cycles = cpu.metrics.active_cycles;
+    std::cout << "[Unfused: VMMUL + VSIGN] Active Cycles: " << unfused_cycles << std::endl;
+    
+    // Fused Code
+    uint64_t start_addr_fused = 30000;
+    cpu.pc = TernaryWord::FromInt64(start_addr_fused);
+    std::vector<TernaryWord> fused_code = {
+        Encode((int)Opcode::LDI, 1, 1, 0, addr_v1),
+        Encode((int)Opcode::LDI, 1, 2, 0, matrix_base),
+        
+        Encode((int)Opcode::VLDR, 0, 0, 1, 0),      // VLDR V0, R1
+        
+        Encode((int)Opcode::VMMSGN, 0, 1, 0, 2),    // VMMSGN V1, V0, R2
+        
+        Encode((int)Opcode::HLT, 0, 0, 0, 0)
+    };
+    for(size_t i=0; i<fused_code.size(); ++i) mem.Write(TernaryWord::FromInt64(start_addr_fused + i), fused_code[i]);
+    
+    cpu.metrics.active_cycles = 0; cpu.halted = false;
+    cpu.Run(100);
+    uint64_t fused_cycles = cpu.metrics.active_cycles;
+    
+    std::cout << "[Fused: VMMSGN] Active Cycles: " << fused_cycles << std::endl;
+    std::cout << "Cycle Savings: " << (unfused_cycles - fused_cycles) << " cycles per layer." << std::endl;
+    
+    return 0;
 }
