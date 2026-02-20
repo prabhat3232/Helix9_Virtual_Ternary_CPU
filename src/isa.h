@@ -63,11 +63,19 @@ enum class Opcode {
     POP = 28, // PopCount
     SAT = 29, // Saturating Add
     
-    // Vector (Phase 7)
-    VEC_CNS = 30, // Vector Consensus
-    VEC_POP = 31, // Vector PopCount
-    DEC_MASK = 32, // Mask Decay
-    SAT_MAC = 33, // Saturating MAC
+    // Vector (Phase 8 - Vector Unit)
+    VEC_CNS = 30, // Vector Consensus (Legacy?)
+    VEC_POP = 31, // Vector PopCount (Legacy?)
+    
+    // New Vector Ops
+    VLDR = 32, // Load Vector
+    VSTR = 33, // Store Vector
+    VADD = 34, // Vector Add
+    VDOT = 35, // Vector Dot Product
+    VMMUL = 36, // Vector-Matrix Multiply
+    VSIGN = 37, // Vector Sign (Ternary Activation)
+    VCLIP = 38, // Vector Clip (Hard Tanh)
+    VSTRI = 39, // Set Vector Stride
     
     UNKNOWN = 99
 };

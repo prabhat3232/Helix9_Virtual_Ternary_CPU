@@ -275,6 +275,21 @@ std::vector<Operand> Parser::ParseOperands(Lexer& lexer, bool dryRun) {
             ops.push_back({OperandType::REGISTER, t.intValue, 0, ""});
             lexer.NextToken();
         } 
+        else if (t.type == TokenType::IDENTIFIER && t.text.length() == 2 && t.text[0] == 'v' && isdigit(t.text[1])) {
+             // Vector Register v0-v3
+             int reg = t.text[1] - '0';
+             if (reg >= 0 && reg <= 3) {
+                 ops.push_back({OperandType::REGISTER, reg, 0, ""});
+                 lexer.NextToken();
+             } else {
+                 // Fallback to identifier if out of range (though v9 is unlikely label?)
+                 // Treat as Identifier
+                 int64_t val = 0;
+                if (!dryRun && symbolTable.count(t.text)) val = symbolTable[t.text];
+                ops.push_back({OperandType::IMMEDIATE, 0, val, t.text});
+                lexer.NextToken();
+             }
+        } 
         else if (t.type == TokenType::NUMBER) {
             ops.push_back({OperandType::IMMEDIATE, 0, t.intValue, ""});
             lexer.NextToken();
@@ -349,8 +364,19 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         {"cmp.w", (int)Opcode::CMP},
         // Cognitive
         {"cns.w", (int)Opcode::CNS}, {"dec.w", (int)Opcode::DEC}, {"pop.t", (int)Opcode::POP}, {"sat.add", (int)Opcode::SAT},
-        // Vector
-        {"vec.cns", (int)Opcode::VEC_CNS}, {"vec.pop", (int)Opcode::VEC_POP}, {"dec.mask", (int)Opcode::DEC_MASK}, {"vec.sat.mac", (int)Opcode::SAT_MAC}
+        // Vector (Phase 8 - Vector Unit)
+        {"vldr", (int)Opcode::VLDR},
+        {"vstr", (int)Opcode::VSTR},
+        {"vadd", (int)Opcode::VADD},
+        {"vdot", (int)Opcode::VDOT},
+        {"vmmul", (int)Opcode::VMMUL},
+        {"vsign", (int)Opcode::VSIGN},
+        {"vclip", (int)Opcode::VCLIP},
+        {"vstri", (int)Opcode::VSTRI},
+        
+        // Legacy/Other
+        {"vec.cns", (int)Opcode::VEC_CNS}, 
+        {"vec.pop", (int)Opcode::VEC_POP}
     };
 
 
@@ -380,6 +406,61 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         } else {
             // 2-arg arithmetic? (e.g. lsl.w rd r1)
             mode = 0; // Default reg?
+        }
+    }
+    // ... Existing logic ...
+    else if (opcode == 36) { // VMMUL
+        // vmmul vd, vs, rs (Matrix Base)
+        if (ops.size() < 3) { std::cerr << "Error: vmmul requires 3 operands" << std::endl; exit(1); }
+        rd = ops[0].reg;
+        rs1 = ops[1].reg; // Vs
+        rs2_imm = ops[2].reg; // Rs (Base) -> Op2
+        mode = 0; 
+    }
+    else if (opcode == 37) { // VSIGN
+        // vsign vd, vs
+        if (ops.size() < 2) { std::cerr << "Error: vsign requires 2 operands" << std::endl; exit(1); }
+        rd = ops[0].reg;
+        rs1 = ops[1].reg;
+        mode = 0;
+    }
+    else if (opcode == 38) { // VCLIP
+        // vclip vd, vs, imm
+        if (ops.size() < 3) { std::cerr << "Error: vclip requires 3 operands" << std::endl; exit(1); }
+        rd = ops[0].reg;
+        rs1 = ops[1].reg;
+        rs2_imm = ops[2].imm;
+        mode = 1;
+    }
+    else if (opcode == 39) { // VSTRI
+        // vstri imm or vstri rs
+        if (ops.size() < 1) { std::cerr << "Error: vstri requires 1 operand" << std::endl; exit(1); }
+        if (ops[0].type == OperandType::IMMEDIATE) {
+            mode = 1; rs2_imm = ops[0].imm;
+        } else {
+            mode = 0; rs2_imm = ops[0].reg;
+        }
+    }
+    else if (opcode >= 32 && opcode <= 35) { // VLDR, VSTR, VADD, VDOT (Phase 8)
+        if (opcode == 32 || opcode == 33) { // VLDR, VSTR
+            // vldr vd, rs (or imm)
+            if (ops.size() < 2) { std::cerr << "Error: " << mnemonic << " requires 2 operands" << std::endl; exit(1); }
+            rd = ops[0].reg;
+            if (ops[1].type == OperandType::IMMEDIATE) {
+                mode = 1; rs2_imm = ops[1].imm;
+            } else {
+                mode = 0; rs2_imm = ops[1].reg;
+            }
+        } else if (opcode == 34 || opcode == 35) { // VADD, VDOT
+            // vadd vd, vs1, vs2 (or imm)
+            if (ops.size() < 3) { std::cerr << "Error: " << mnemonic << " requires 3 operands" << std::endl; exit(1); }
+            rd = ops[0].reg;
+            rs1 = ops[1].reg;
+            if (ops[2].type == OperandType::IMMEDIATE) {
+                mode = 1; rs2_imm = ops[2].imm;
+            } else {
+                mode = 0; rs2_imm = ops[2].reg;
+            }
         }
     }
     else if (mnemonic == "cmp.w") {
@@ -499,7 +580,7 @@ TernaryWord Parser::EncodeInstruction(const std::string& mnemonic, const std::ve
         rs1 = ops[1].reg;
         mode = 0;
     }
-    else if (opcode == 30 || opcode == 32 || opcode == 33) { // VEC.CNS, DEC.MASK, SAT.MAC
+    else if (opcode == 30) { // VEC_CNS
         // vec.cns pd, ps1, ps2
         if (ops.size() < 3) { std::cerr << "Error: Vector op requires 3 operands" << std::endl; exit(1); }
         rd = ops[0].reg;

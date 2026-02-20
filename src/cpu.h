@@ -22,6 +22,12 @@ public:
     TernaryWord status; // COG=Cognitive Mode
     static const int BIT_COG = 6;
 
+    // Phase 8: Vector Unit
+    // 4 Vector Registers, dynamic length
+    std::vector<TernaryWord> vec_regs[4];
+    int vector_length = 32; // Default VL
+    int stride = 1;         // Vector Load Stride
+
     
     TernaryMemory& mem;
     bool halted;

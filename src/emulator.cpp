@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     
     for(int i=2; i<argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--trace") {
+        if (arg == "--trace" || arg == "-t") {
             trace = true;
         } else {
              try {

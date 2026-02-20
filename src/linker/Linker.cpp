@@ -208,11 +208,14 @@ bool Linker::Link() {
             int64_t sectionBase = sectionMap[reloc.section].startAddress;
             int64_t patchAddr = sectionBase + fileOffset + reloc.offset;
             
+            std::cout << "[LINK DEBUG] Relocating '" << reloc.symbol << "' at patchAddr " << patchAddr << " to targetAddr " << targetAddr << std::endl;
+
             // Apply
             if (reloc.type == "ABS") {
                 // Patch immediate field only (lower 10 trits), preserve opcode/mode/rd
                 TernaryWord original = sectionMap[reloc.section].data[fileOffset + reloc.offset];
-                original.SetSlice(0, 10, targetAddr);
+                original.SetSlice(0, 10, patchAddr); // Wait, targetAddr not patchAddr! Reloc Value = Target Addr
+                original.SetSlice(0, 10, targetAddr); 
                 sectionMap[reloc.section].data[fileOffset + reloc.offset] = original;
             }
             else if (reloc.type == "PCR") {
@@ -223,31 +226,21 @@ bool Linker::Link() {
                 // Let's assume standard PC-Relative behaviour.
                 int64_t value = targetAddr - (patchAddr + 1);
                 
-                // We need to preserve opcode/mode!
                 TernaryWord original = sectionMap[reloc.section].data[fileOffset + reloc.offset];
-                // Update ONLY lower 10 trits (imm)
-                // Original: Opcode(6) Mode(3) Rd(4) Rs1(4) Imm(10)
-                // We want to replace Imm.
-                // Reconstruct? Or define SetSlice?
-                // TritWord has SetSlice.
-                
-                // Get Lower 10 trits
-                // But wait, what if value exceeds 10 trits?
-                // Range check?
-                
                 original.SetSlice(0, 10, value);
                 sectionMap[reloc.section].data[fileOffset + reloc.offset] = original;
             }
         }
     }
     
-    // Update outputSections (they hold copies, so copying back logic is flawed in loop above)
-    // Correction: sectionMap holds the data which we modify. outputSections are built afterwards?
-    // No, outputSections were built in Step 3.
-    // Re-build outputSections from sectionMap, or use sectionMap for final output.
+    // Update outputSections (Move this AFTER relocations)
     outputSections.clear();
-    if (sectionMap.count(".text")) outputSections.push_back(sectionMap[".text"]);
-    if (sectionMap.count(".data")) outputSections.push_back(sectionMap[".data"]);
+    if (sectionMap.count(".text")) {
+         outputSections.push_back(sectionMap[".text"]);
+    }
+    if (sectionMap.count(".data")) {
+         outputSections.push_back(sectionMap[".data"]);
+    }
     
     return true;
 }

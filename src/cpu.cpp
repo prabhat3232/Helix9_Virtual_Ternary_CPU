@@ -307,16 +307,131 @@ uint64_t Cpu::Step(uint64_t max_cycles) {
             metrics.total_cycles += 255;
             vec_unit.PopCount(rd_idx, rs1_idx);
             break;
-        case Opcode::DEC_MASK:
-            metrics.active_cycles += 256;
-            metrics.total_cycles += 255;
-            vec_unit.DecayMask(rd_idx, rs1_idx, rs2_idx);
+        // --- Vector Unit (Phase 8) ---
+        case Opcode::VLDR: {
+            // VLDR Vd, Op2 (Load Vector from Mem[Op2])
+            int v_dest = rd_idx % 4; // Map 16 regs to 4 V-Regs
+            int64_t base_addr = Op2.ToInt64();
+            
+            metrics.active_cycles += vector_length;
+            vec_regs[v_dest].resize(vector_length);
+            for(int i=0; i<vector_length; ++i) {
+                // Phase 9: Use Stride
+                vec_regs[v_dest][i] = mem.Read(TernaryWord::FromInt64(base_addr + (i * stride)));
+            }
+            if (trace_enabled) std::cout << "  VLDR V" << v_dest << " loaded from " << base_addr << " (stride=" << stride << ")" << std::endl;
             break;
-        case Opcode::SAT_MAC:
-            metrics.active_cycles += 256;
-            metrics.total_cycles += 255;
-            vec_unit.SatMAC(rd_idx, rs1_idx, rs2_idx);
+        }
+        case Opcode::VSTR: {
+            // VSTR Vs (Rd), Base (Op2)
+            int v_src = rd_idx % 4;
+            int64_t base_addr = Op2.ToInt64();
+            
+            metrics.active_cycles += vector_length;
+            if (v_src < 4 && !vec_regs[v_src].empty()) {
+                for(int i=0; i<vector_length && i < vec_regs[v_src].size(); ++i) {
+                    // VSTR currently assumes compact (stride=1) for simplicity
+                    mem.Write(TernaryWord::FromInt64(base_addr + i), vec_regs[v_src][i]);
+                }
+                 if (trace_enabled) std::cout << "  VSTR V" << v_src << " stored to " << base_addr << std::endl;
+            }
             break;
+        }
+        case Opcode::VADD: {
+            // VADD Vd, Vs1, Vs2
+            int v_d  = rd_idx % 4;
+            int v_s1 = rs1_idx % 4;
+            int v_s2 = rs2_idx % 4; 
+            
+            metrics.active_cycles += vector_length;
+            vec_regs[v_d].resize(vector_length);
+            for(int i=0; i<vector_length; ++i) {
+                TernaryWord val1 = (i < vec_regs[v_s1].size()) ? vec_regs[v_s1][i] : TernaryWord();
+                TernaryWord val2 = (i < vec_regs[v_s2].size()) ? vec_regs[v_s2][i] : TernaryWord();
+                // Vector ADD on Trits (Integer Add)
+                vec_regs[v_d][i] = val1.Add(val2);
+            }
+            break;
+        }
+        case Opcode::VDOT: {
+            // VDOT Rd, Vs1, Vs2
+            int v_s1 = rs1_idx % 4;
+            int v_s2 = rs2_idx % 4;
+            
+            metrics.active_cycles += vector_length;
+            int64_t sum = 0;
+            for(int i=0; i<vector_length; ++i) {
+                 int64_t v1 = (i < vec_regs[v_s1].size()) ? vec_regs[v_s1][i].ToInt64() : 0;
+                 int64_t v2 = (i < vec_regs[v_s2].size()) ? vec_regs[v_s2][i].ToInt64() : 0;
+                 sum += v1 * v2; 
+            }
+            Rd = TernaryWord::FromInt64(sum);
+            writeback = true; new_rd_val = Rd;
+            break;
+        }
+        case Opcode::VMMUL: {
+             // VMMUL Vd, Vs, Rs (Base of Matrix)
+             // Vd[i] = Dot(Vs, MatrixRow[i])
+             int v_d = rd_idx % 4;
+             int v_s = rs1_idx % 4; // Use Rs1 slot for Source Vector
+             int64_t matrix_base = Op2.ToInt64(); // Mode 0: Rs2/Imm holds Base Reg?
+             // Decode logic puts Regs[rs2] into Op2. Let's assume Matrix Base is in Op2 (Rs2).
+             // Instruction Format: VMMUL Vd, Vs1, Rs2
+             
+             metrics.active_cycles += (vector_length * vector_length); // O(N^2) complexity
+             vec_regs[v_d].resize(vector_length);
+             
+             for(int i=0; i<vector_length; ++i) {
+                 int64_t sum = 0;
+                 // Base address of Row i
+                 int64_t row_base = matrix_base + (i * vector_length);
+                 
+                 for(int j=0; j<vector_length; ++j) {
+                     int64_t vec_val = (j < vec_regs[v_s].size()) ? vec_regs[v_s][j].ToInt64() : 0;
+                     int64_t mat_val = mem.Read(TernaryWord::FromInt64(row_base + j)).ToInt64();
+                     sum += vec_val * mat_val;
+                 }
+                 vec_regs[v_d][i] = TernaryWord::FromInt64(sum);
+             }
+             break;
+        }
+        case Opcode::VSIGN: {
+            // VSIGN Vd, Vs
+            int v_d = rd_idx % 4;
+            int v_s = rs1_idx % 4;
+            
+            metrics.active_cycles += vector_length;
+            vec_regs[v_d].resize(vector_length);
+            for(int i=0; i<vector_length; ++i) {
+                int64_t val = (i < vec_regs[v_s].size()) ? vec_regs[v_s][i].ToInt64() : 0;
+                int64_t sign = (val > 0) ? 1 : ((val < 0) ? -1 : 0);
+                vec_regs[v_d][i] = TernaryWord::FromInt64(sign);
+            }
+            break;
+        }
+        case Opcode::VCLIP: {
+             // VCLIP Vd, Vs, Imm
+             int v_d = rd_idx % 4;
+             int v_s = rs1_idx % 4;
+             int64_t limit = imm_val; // From Op2/Imm slice, usually small like 1 or 2.
+             
+             metrics.active_cycles += vector_length;
+             vec_regs[v_d].resize(vector_length);
+             for(int i=0; i<vector_length; ++i) {
+                 int64_t val = (i < vec_regs[v_s].size()) ? vec_regs[v_s][i].ToInt64() : 0;
+                 if (val > limit) val = limit;
+                 if (val < -limit) val = -limit;
+                 vec_regs[v_d][i] = TernaryWord::FromInt64(val);
+             }
+             break;
+        }
+        case Opcode::VSTRI: {
+             // VSTRI Op2 (Imm or Reg)
+             stride = (int)Op2.ToInt64();
+             if (stride < 1) stride = 1; // Minimum stride 1
+             if (trace_enabled) std::cout << "  VSTRI stride=" << stride << std::endl;
+             break;
+        }
 
         default:
             std::cerr << "[CPU] Unknown Opcode: " << op_val << " at PC=" << pc.ToInt64() << std::endl;

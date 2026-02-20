@@ -37,6 +37,9 @@ The Instruction Set Architecture is designed around 42-bit (27-trit) instruction
     *   `POP Rd, Rs1`: Counts the total "energy" (non-zero trits) in a word/vector.
 *   **Vector**:
     *   `VEC.CNS`: Performs element-wise consensus on 256-word pages in 1 cycle (hardware model).
+    *   `VLDR`/`VSTR`: Vector Load/Store (Length=32).
+    *   `VADD`: Vector Addition.
+    *   `VDOT`: Vector Dot Product (TNN Acceleration).
 
 ### 2.2 Memory Model
 *   **Sparse Cognitive Pages**: Memory is organized into 256-word pages. Pages are allocated on-demand, allowing sparse agent states (90% memory savings for inactive agents).
@@ -105,7 +108,7 @@ We validated the architecture through a series of "Cognitive Experiments".
 ---
 
 ## 6. Performance Benchmarks
-(Updated: 2026-02-16)
+(Updated: 2026-02-19)
 
 Benchmarks verify the efficiency of the Cognitive Primitives.
 
@@ -114,10 +117,12 @@ Benchmarks verify the efficiency of the Cognitive Primitives.
 | **Base Arithmetic** | 4006 | Baseline scalar performance. |
 | **Cognitive Ops** | 6006 | Scalar Implementation of `CNS`/`DEC`. |
 | **Agent Cycle** | 5908 | Full Sense-Act loop (100 iterations). |
-| **Vector Soft** | 2567 | Scalar loop processing 256 elements. |
-| **Vector Hard** | 260 | Hardware Vector Unit (Simulated Latency). |
+| **Vector Soft (N=256)** | 2567 | Scalar loop processing 256 elements. |
+| **Vector Hard (N=256)** | 260 | Hardware `VEC.CNS` (Simulated). |
+| **Scalar Dot (N=32)** | 453 | Baseline Loop for TNN. |
+| **Vector Dot (N=32)** | 98 | **4.6x Speedup** using `VDOT`. |
 
-**Conclusion**: The Vector Unit delivers a verified **~10x Speedup** for cognitive workloads.
+**Conclusion**: The Vector Unit delivers a verified **4.6x - 10x Speedup** for cognitive workloads.
 
 ---
 
@@ -144,6 +149,7 @@ cmake --build . --config Debug
 ./build/Debug/seeker_2d      # Run Exp 1
 ./build/Debug/swarm_exp      # Run Exp 2
 ./build/Debug/resonance_exp  # Run Exp 3
+./build/Debug/tnn_benchmark  # Run TNN Vector Benchmark
 ```
 
 ### Running Python Scripts

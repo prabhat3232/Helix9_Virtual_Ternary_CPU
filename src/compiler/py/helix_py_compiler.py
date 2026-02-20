@@ -148,31 +148,41 @@ class HelixCompiler(ast.NodeVisitor):
                 
                 if isinstance(dims, ast.Tuple):
                     elts = dims.elts
+                    
+                    # Helper to extract value
+                    def get_val(n):
+                        if isinstance(n, ast.Constant): return n.value
+                        if isinstance(n, ast.Num): return n.n
+                        return None
+
                     if len(elts) == 2:
-                        # Helper to extract value
-                        def get_val(n):
-                            if isinstance(n, ast.Constant): return n.value
-                            if isinstance(n, ast.Num): return n.n
-                            return None
-                        
                         rows = get_val(elts[0])
                         cols = get_val(elts[1])
+                        depth = 1 # Default 2D
+                    elif len(elts) == 3:
+                        depth = get_val(elts[0])
+                        rows = get_val(elts[1])
+                        cols = get_val(elts[2])
                         
         if is_matrix and rows is not None and cols is not None:
              # Allocate in .DAT
-             size = rows * cols
+             # Size = Depth * Rows * Cols
+             depth = depth if 'depth' in locals() else 1
+             size = depth * rows * cols
              addr = self.dat_ptr
              self.dat_ptr += size
              
              self.scope[var_name] = {
                  'type': 'matrix',
                  'addr': addr,
-                 'dims': (rows, cols)
+                 'dims': (depth, rows, cols)
              }
-             self.emit(f"; Declared Matrix {var_name} [{rows}x{cols}] at .DAT {addr}")
+             if depth > 1:
+                 self.emit(f"; Declared 3D Matrix {var_name} [{depth}x{rows}x{cols}] at .DAT {addr}")
+             else:
+                 self.emit(f"; Declared Matrix {var_name} [{rows}x{cols}] at .DAT {addr}")
              
-             self.scope[var_name] = {'type': 'matrix', 'addr': addr, 'dims': (rows, cols)}
-             self.emit(f"; Declared Matrix {var_name} [{rows}x{cols}] at .DAT {addr}")
+
              
              # Initialization Logic
              init_vals = []
@@ -598,7 +608,13 @@ class HelixCompiler(ast.NodeVisitor):
             if var_name in self.scope:
                 var_info = self.scope[var_name]
                 if var_info['type'] == 'matrix':
-                    rows, cols = var_info['dims']
+                    dims = var_info['dims']
+                    if len(dims) == 2:
+                        rows, cols = dims
+                        depth = 1
+                    else:
+                        depth, rows, cols = dims
+                        
                     base_addr = var_info['addr']
                     
                     # Parse Indices [i, j]
@@ -614,33 +630,96 @@ class HelixCompiler(ast.NodeVisitor):
                     else:
                         raise NotImplementedError("Matrix access requires [i, j] tuple index")
                         
-                    if len(indices) != 2:
-                        raise ValueError("Matrix access requires 2 indices [row, col]")
+                    if len(indices) == 2:
+                        # 2D Access: [row, col] -> (row * cols) + col
+                        # Check definition
+                        if len(var_info['dims']) == 3 and var_info['dims'][0] > 1:
+                             # Accessing 3D matrix with 2 indices? 
+                             # For now, strictly enforce dimension match or assume Depth=0?
+                             # Let's enforce match.
+                             raise ValueError(f"Matrix {var_name} is 3D, but accessed with 2 indices")
+
+                        cols = var_info['dims'][2] # (1, rows, cols) or (depth, rows, cols) -> wait, stored as (rows, cols) before?
+                        # Fix: Previous code stored (rows, cols). New code stores (depth, rows, cols).
+                        # We need to handle backward compatibility of definitions if we changed the storage format.
+                        # Logic: if len(dims)==2 -> (rows, cols). If len(dims)==3 -> (depth, rows, cols).
                         
-                    # Calculate Offset = row * cols + col
-                    # We need to emit code to calculate this run-time.
-                    
-                    # 1. Evaluate Row Index -> R1
-                    self.visit(indices[0])
-                    # Push Row to Stack
-                    self.emit("ADD.W SP, SP, -1")
-                    self.emit("ST.W R1, [SP, 0]")
-                    
-                    # 2. Evaluate Col Index -> R1
-                    self.visit(indices[1])
-                    # Move Col to R4 temporarily
-                    self.emit("MOV.W R4, R1")
-                    
-                    # 3. Pop Row -> R3
-                    self.emit("LD.W R3, [SP, 0]")
-                    self.emit("ADD.W SP, SP, 1")
-                    
-                    # 4. Calc Offset: R3 * cols + R4
-                    self.emit("MOV.W R5, R3")
-                    self.emit(f"LDI.W R2, {cols}")
-                    self.emit("MUL.W R5, R5, R2")
-                    self.emit("ADD.W R5, R5, R4")
-                    
+                        current_dims = var_info['dims']
+                        if len(current_dims) == 2:
+                            r_cnt = current_dims[0]
+                            c_cnt = current_dims[1]
+                        else:
+                             # Should not happen if we enforce match, but for safety
+                             c_cnt = current_dims[2]
+
+                        # 1. Row -> R1
+                        self.visit(indices[0])
+                        self.emit("ADD.W SP, SP, -1")
+                        self.emit("ST.W R1, [SP, 0]")
+                        
+                        # 2. Col -> R1 -> R4
+                        self.visit(indices[1])
+                        self.emit("MOV.W R4, R1")
+                        
+                        # 3. Pop Row -> R3
+                        self.emit("LD.W R3, [SP, 0]")
+                        self.emit("ADD.W SP, SP, 1")
+                        
+                        # 4. Calc Offset: R3 * c_cnt + R4
+                        self.emit("MOV.W R5, R3")
+                        self.emit(f"LDI.W R2, {c_cnt}")
+                        self.emit("MUL.W R5, R5, R2")
+                        self.emit("ADD.W R5, R5, R4")
+                        
+                    elif len(indices) == 3:
+                        # 3D Access: [d, r, c] -> d*(rows*cols) + r*cols + c
+                        if len(var_info['dims']) != 3:
+                            raise ValueError(f"Matrix {var_name} is not 3D")
+                            
+                        depth_cnt, row_cnt, col_cnt = var_info['dims']
+                        
+                        # 1. Depth -> R1
+                        self.visit(indices[0])
+                        self.emit("ADD.W SP, SP, -1")
+                        self.emit("ST.W R1, [SP, 0]") # Push d
+                        
+                        # 2. Row -> R1
+                        self.visit(indices[1])
+                        self.emit("ADD.W SP, SP, -1")
+                        self.emit("ST.W R1, [SP, 0]") # Push r
+
+                        # 3. Col -> R1 (Keep in R1/R4)
+                        self.visit(indices[2])
+                        self.emit("MOV.W R4, R1") # c in R4
+                        
+                        # Pop r -> R3
+                        self.emit("LD.W R3, [SP, 0]")
+                        self.emit("ADD.W SP, SP, 1")
+                        
+                        # Pop d -> R5
+                        self.emit("LD.W R5, [SP, 0]")
+                        self.emit("ADD.W SP, SP, 1")
+                        
+                        # Calculate Offset
+                        # Offset = d * (rows*cols) + r * cols + c
+                        
+                        # Term 1: d * (rows*cols)
+                        plane_size = row_cnt * col_cnt
+                        self.emit(f"LDI.W R2, {plane_size}")
+                        self.emit("MUL.W R5, R5, R2") # R5 = d * plane_size
+                        
+                        # Term 2: r * cols
+                        self.emit("MOV.W R2, R3") # R2 = r
+                        self.emit(f"LDI.W R1, {col_cnt}")
+                        self.emit("MUL.W R2, R2, R1") # R2 = r * cols
+                        
+                        # Sum: R5 + R2 + R4(c)
+                        self.emit("ADD.W R5, R5, R2")
+                        self.emit("ADD.W R5, R5, R4")
+                        
+                    else:
+                        raise ValueError("Matrix access requires 2 or 3 indices")
+
                     # 5. Add Base Address
                     self.emit(f"LDI.W R6, {base_addr}")
                     self.emit("ADD.W R6, R6, R5")

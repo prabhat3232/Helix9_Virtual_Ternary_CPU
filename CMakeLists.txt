@@ -25,6 +25,9 @@ add_library(helix9_core
     src/cognitive/scheduler.cpp
     src/cognitive/stability_monitor.cpp
     src/cognitive/reward_engine.cpp
+    src/tnn/helix_runtime.cpp
+    src/tnn/helix_runtime_exec.cpp
+    src/tnn/helix_runtime.h
 )
 
 # Python Bindings (DLL)
@@ -139,6 +142,17 @@ add_executable(helix_bench
     benchmarks/benchmark_main.cpp
 )
 target_link_libraries(helix_bench helix9_core)
+
+# TNN Benchmark
+add_executable(tnn_benchmark
+    experiments/tnn_benchmark.cpp
+)
+target_link_libraries(tnn_benchmark helix9_core)
+add_executable(test_tnn_runtime
+    tests/test_tnn_runtime.cpp
+)
+target_link_libraries(test_tnn_runtime helix9_core)
+
 # Test: Multi-Agent Concurrency
 add_executable(test_multi_agent 
     tests/test_multi_agent.cpp

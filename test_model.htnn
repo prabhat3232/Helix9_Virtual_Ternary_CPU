@@ -1,0 +1,7 @@
+HTNN 1 Test_TNN_Model
+LAYER Dense 2 2
+WEIGHTS
+1 1 -1 -1 
+BIASES
+0 0 
+LAYER Activation_Sign 2 2

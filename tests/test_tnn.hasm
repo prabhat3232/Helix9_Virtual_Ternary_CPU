@@ -1,0 +1,52 @@
+; Test for Phase 9 TNN Opcodes
+.section .text
+.global main
+
+main:
+    ; 1. Setup Stride = 1
+    vstri 1
+    
+    ; 2. Load Input Vector V0 from 'vector_data'
+    ldi.w r1, vector_data
+    vldr v0, r1
+    
+    ; 3. Matrix-Vector Multiply: V1 = V0 * Matrix (at 'matrix_data')
+    ldi.w r2, matrix_data
+    vmmul v1, v0, r2
+    
+    ; 4. Apply Activation: VSIGN
+    vsign v2, v1
+    
+    ; 5. Verify Result
+    ; V0 = [1, 1, 1...] (All 1s for simplicity)
+    ; Matrix Row 0: [1, 1, 1...] -> Dot = 32 (Positive) -> Sign = 1
+    ; Matrix Row 1: [-1, -1, -1...] -> Dot = -32 (Negative) -> Sign = -1
+    
+    ; Store V2 Result to memory to inspect
+    ldi.w r3, result_buffer
+    vstr v2, r3
+    
+    hlt
+
+.section .data
+vector_data:
+    ; 32 Trits of +1
+    .word 1, 1, 1, 1, 1, 1, 1, 1
+    .word 1, 1, 1, 1, 1, 1, 1, 1
+    .word 1, 1, 1, 1, 1, 1, 1, 1
+    .word 1, 1, 1, 1, 1, 1, 1, 1
+
+matrix_data:
+    ; Row 0: All +1 (32 words)
+    .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    ; Row 1: All -1 (32 words)
+    .word -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    .word -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    ; Row 2..31: 0 (Padding for 32x32 matrix, simplistic)
+    ; In real test we need 32*32 words. 
+    ; For compact test, we rely on 0-init memory, but explicit is better.
+    ; Just testing Row 0 and 1 is enough for now.
+    
+result_buffer:
+    .word 0, 0, 0, 0, 0, 0, 0, 0
